@@ -10,10 +10,16 @@ from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT, Grid
 from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
+import pandas as pd
+
 window = tk.Tk()
 window.geometry("800x600")
 window.minsize(800, 600)
 window.title("Annotate the cars!")
+
+ico = Image.open(pathlib.Path('media', 'icon.ico'))
+photo = ImageTk.PhotoImage(ico)
+window.wm_iconphoto(False, photo)
 
 
 # Specify Grid
@@ -36,6 +42,8 @@ class Annotator:
     select_value_inout = None
     select_value_newold = None
     select_value_prepost = None
+
+    dataframe = pd.DataFrame(columns=['make', 'model', 'inout', 'newold', 'prepost', 'oldname', 'newname'])
 
     def __init__(self):
         print("Annotator initialized")
@@ -110,7 +118,7 @@ class Annotator:
 
         # label
         label = Label(
-            window, text=label_txt, font=("Times New Roman", 10)
+            window, text=label_txt,  # font=("Times New Roman", 10)
         )
         label.grid(column=pX, row=pY, padx=10, pady=5)
 
@@ -182,19 +190,18 @@ class Annotator:
     # --- ACTION FUNCTIONS (BUTTONS)
 
     def action_skip(self, key=None):
-        print("SKIP")
         self.get_next_car()
 
     def action_save(self):
-        print("SAVE")
         try:
             self.collect_car_inputs()
             self.get_next_car()
-        except Exception:
-            print("An error occured while collecting the data")
+        except Exception as e:
+            logging.error(f"An error occured while collecting the data: {e}")
 
     def action_select_input(self):
         self.input_folder = self.select_folder(title="Select the input directory")
+        self.output_folder = self.input_folder
         logging.info(f"SOURCE FOLDER: {self.input_folder}")
         self.get_images_list()
 
@@ -209,7 +216,7 @@ class Annotator:
             self.img_index += 1
             self.display_current_car()
         except IndexError:
-            print("ALL IMAGES HAVE BEEN REVIEWED")
+            logging.info("ALL IMAGES HAVE BEEN REVIEWED")
 
     def select_folder(self, title):
         return filedialog.askdirectory(title=title)
@@ -236,15 +243,40 @@ class Annotator:
 
     def collect_car_inputs(self):
 
+        file = pathlib.Path(self.output_folder, 'annotations.csv')
+        if file.exists():
+            print("File exist")
+            self.dataframe = pd.read_csv(pathlib.Path(self.output_folder, 'annotations.csv'))
+
         # TODO here we need to save the data in a dataframe and export it as a CSV
         # we also need to save the input image as a new image in the output folder with the right naming convention
         print("COLLECT DATA")
-        print(self.select_value_make.get())
-        print(self.select_value_model.get())
-        print(self.select_value_inout.get())
-        print(self.select_value_newold.get())
-        print(self.select_value_prepost.get())
+        print(f"Image path: {self.img_list[self.img_index]}")
+        print(f"Make: {self.select_value_make.get()}")
+        print(f"Model: {self.select_value_model.get()}")
+        print(f"Inside/Outisde: {self.select_value_inout.get()}")
+        print(f"New/Old: {self.select_value_newold.get()}")
+        print(f"Pre/post-loss: {self.select_value_prepost.get()}")
+        # TODO Collect damaged parts & severity
+        print("New name & path: TODO")
         print("DONE")
+
+        file_name = pathlib.Path(self.img_list[self.img_index]).stem
+
+        new_entry = pd.DataFrame([{
+            'make': self.select_value_make.get(),
+            'model': self.select_value_model.get(),
+            'inout': self.select_value_inout.get(),
+            'newold': self.select_value_newold.get(),
+            'prepost': self.select_value_prepost.get(),
+            'oldname': file_name,
+            'newname': "TODO"}])
+
+        self.dataframe = pd.concat([self.dataframe, new_entry])
+
+        print("DATAFRAME:", self.dataframe)
+
+        self.dataframe.to_csv(pathlib.Path(self.output_folder, "annotations.csv"))
 
 
 # -- Initialize the main class
