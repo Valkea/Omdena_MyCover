@@ -18,6 +18,7 @@ window.title("Annotate the cars!")
 class Annotator:
 
     input_folder = None
+    output_folder = None
     img_list = []
     img_index = 0
 
@@ -32,51 +33,23 @@ class Annotator:
 
         self.initialize_menu()
 
+    # --- DISPLAY FUNCTIONS
+
     def initialize_menu(self):
 
         pX, pY = 0, 11
 
         # Select input folder
-        input_button = Button(text="Select input folder", command=self.select_folder)
+        input_button = Button(text="Select input folder", command=self.action_select_input)
         input_button.grid(row=pY, column=pX)
 
         # Select ouput folder
-        input_button = Button(text="Select output folder", command=self.select_folder)
+        input_button = Button(text="Select output folder", command=self.action_select_output)
         input_button.grid(row=pY, column=pX + 1)
 
         # Exit the program
         exit_button = Button(text="Exit", command=window.destroy)
         exit_button.grid(row=pY, column=pX + 2)
-
-    def select_folder(self):
-
-        self.input_folder = filedialog.askdirectory(title="Select the target directory")
-        logging.info(f"SOURCE FOLDER: {self.input_folder}")
-
-        self.get_images_list()
-
-    def get_images_list(self):
-
-        extensions = ["jpg", "png"]
-
-        for extension in extensions:
-            images_paths = glob.glob(
-                str(pathlib.Path(self.input_folder, f"*.{extension}"))
-            )
-            self.img_list.extend(images_paths)
-
-        logging.info(f"SELECTED FILES: {self.img_list}")
-
-        if len(self.img_list) == 0:
-            return
-
-        self.display_schema()
-        self.display_current_car(car_index=0)
-        self.display_brand_select()
-        self.display_model_select()
-        self.display_inout_select()
-        self.display_newold_select()
-        self.display_nextpass_buttons()
 
     def display_schema(self):
 
@@ -93,11 +66,11 @@ class Annotator:
         # btns[btn_nr].grid(row=1, column=btn_nr)
         # btns[btn_nr].img = image  # keep a reference so it's not garbage collected
 
-    def display_current_car(self, car_index):
+    def display_current_car(self):
 
         pX, pY = 2, 0
 
-        img_src = Image.open(self.img_list[car_index])
+        img_src = Image.open(self.img_list[self.img_index])
         img_resized = img_src.resize((300, 205), Image.LANCZOS)
         img_display = ImageTk.PhotoImage(img_resized)
 
@@ -105,6 +78,14 @@ class Annotator:
         label1.image = img_display
         label1.grid(column=pX, row=pY, columnspan=2, rowspan=2)
         # label1.place(x=350, y=25)
+
+        self.display_schema()
+        self.display_brand_select()
+        self.display_model_select()
+        self.display_inout_select()
+        self.display_newold_select()
+        self.display_prepost_select()
+        self.display_nextpass_buttons()
 
     def display_select(self, label_txt, values, pX, pY, current_index=0):
 
@@ -126,92 +107,31 @@ class Annotator:
 
     def display_brand_select(self):
 
-        self.display_select("Select the car brand:", ("Undefined", "Honda", "BMW", "Renaud"), pX=2, pY=3, current_index=0)
-
-        # pX, pY = 1, 3
-
-        # # label
-        # label = Label(
-        #     window, text="Select the car brand:", font=("Times New Roman", 10)
-        # )
-        # label.grid(column=pX, row=pY, padx=10, pady=5)
-
-        # # Combobox creation
-        # n1 = tk.StringVar()
-        # select_maker = Combobox(window, width=27, textvariable=n1)
-
-        # # Adding combobox drop down list
-        # select_maker["values"] = ("Undefined", "Honda", "BMW", "Renaud")
-        # select_maker.grid(column=pX + 1, row=pY)
-        # select_maker.current(0)
+        # TODO we need to load the brands from an external file (xml ?)
+        self.display_select("The make of the car:", ("Undefined", "Honda", "BMW", "Renaud"), pX=2, pY=3, current_index=0)
 
     def display_model_select(self):
 
-        self.display_select("Select the car model:", ("Undefined", "M1", "M2", "M3", "M4"), pX=2, pY=4, current_index=0)
-
-        # pX, pY = 1, 4
-
-        # # label
-        # label = Label(
-        #     window, text="Select the car model:", font=("Times New Roman", 10)
-        # )
-        # label.grid(column=pX, row=pY, padx=10, pady=5)
-
-        # # Combobox creation
-        # n2 = tk.StringVar()
-        # select_model = Combobox(window, width=27, textvariable=n2)
-
-        # # Adding combobox drop down list
-        # select_model["values"] = ("Undefined", "M1", "M2", "M3")
-        # select_model.grid(column=pX + 1, row=pY)
-        # select_model.current(0)
+        # TODO we need to load the modes from an external file (xml ?)
+        # and change it accordingly to the selected brand
+        self.display_select("The model of the car:", ("Undefined", "M1", "M2", "M3", "M4"), pX=2, pY=4, current_index=0)
 
     def display_inout_select(self):
 
-        self.display_select("Select the photo model:", ("Outside", "Inside"), pX=2, pY=5, current_index=0)
-
-        # pX, pY = 1, 5
-
-        # # label
-        # label = Label(
-        #     window, text="Select the photo type", font=("Times New Roman", 10)
-        # )
-        # label.grid(column=pX, row=pY, padx=10, pady=5)
-
-        # # Combobox creation
-        # n3 = tk.StringVar()
-        # select_inout = Combobox(window, width=27, textvariable=n3)
-
-        # # Adding combobox drop down list
-        # select_inout["values"] = ("Outside", "Inside")
-        # select_inout.grid(column=pX + 1, row=pY)
-        # select_inout.current(0)
+        self.display_select("The context of the photo:", ("Outside", "Inside"), pX=2, pY=5, current_index=0)
 
     def display_newold_select(self):
 
-        self.display_select("Select the car's condition:", ("Undefined", "Old", "New"), pX=2, pY=6, current_index=0)
+        self.display_select("The condition of the car:", ("Undefined", "Old", "New"), pX=2, pY=6, current_index=0)
 
-        # pX, pY = 1, 6
+    def display_prepost_select(self):
 
-        # # label
-        # label = Label(
-        #     window, text="Select the car's condition", font=("Times New Roman", 10)
-        # )
-        # label.grid(column=pX, row=pY, padx=10, pady=5)
-
-        # # Combobox creation
-        # n3 = tk.StringVar()
-        # select_newold = Combobox(window, width=27, textvariable=n3)
-
-        # # Adding combobox drop down list
-        # select_newold["values"] = ("Undefined", "New", "Old")
-        # select_newold.grid(column=pX + 1, row=pY)
-        # select_newold.current(0)
+        self.display_select("Pre-loss or post-loss:", ("post-loss", "pre-loss"), pX=2, pY=7, current_index=0)
 
     def display_nextpass_buttons(self):
-        pX, pY = 3, 7
+        pX, pY = 3, 8
 
-        # Load icons 
+        # Load icons
         img_src = Image.open(pathlib.Path("media", "checkmark_button.png"))
         img_resized = img_src.resize((50, 50), Image.LANCZOS)
         self.img_checkmark = ImageTk.PhotoImage(img_resized)
@@ -224,8 +144,8 @@ class Annotator:
         f1 = tk.Frame(window)
 
         # Create buttons
-        button_save = Button(f1, text="Save", image=self.img_checkmark, compound=LEFT, command=window.destroy)
-        button_skip = Button(f1, text="Skip", image=self.img_crossmark, compound=LEFT, command=window.destroy)
+        button_save = Button(f1, text="Save", image=self.img_checkmark, compound=LEFT, command=self.action_save)
+        button_skip = Button(f1, text="Skip", image=self.img_crossmark, compound=LEFT, command=self.action_skip)
 
         # Position buttons into the frame
         button_save.pack(side="left")
@@ -233,6 +153,53 @@ class Annotator:
 
         # Position the frame into the grid
         f1.grid(column=pX, row=pY)
+
+    # --- ACTION FUNCTIONS (BUTTONS)
+
+    def action_skip(self):
+        print("SKIP")
+        self.img_index += 1
+        try:
+            self.display_current_car()
+        except IndexError:
+            print("ALL IMAGES HAVE BEEN REVIEWED")
+
+    def action_save(self):
+        print("SAVE")
+
+    def action_select_input(self):
+        self.input_folder = self.select_folder(title="Select the input directory")
+        logging.info(f"SOURCE FOLDER: {self.input_folder}")
+        self.get_images_list()
+
+    def action_select_output(self):
+        self.output_folder = self.select_folder(title="Select the output directory")
+        logging.info(f"TARGET FOLDER: {self.output_folder}")
+
+    # --- GENERIC FUNCTIONS
+
+    def select_folder(self, title):
+        return filedialog.askdirectory(title=title)
+
+    def get_images_list(self):
+
+        extensions = ["jpg", "png"]
+
+        try:
+            for extension in extensions:
+                images_paths = glob.glob(
+                    str(pathlib.Path(self.input_folder, f"*.{extension}"))
+                )
+                self.img_list.extend(images_paths)
+        except TypeError:
+            pass
+
+        logging.info(f"SELECTED FILES: {self.img_list}")
+
+        if len(self.img_list) == 0:
+            return
+
+        self.display_current_car()
 
 
 # -- Initialize the main class
