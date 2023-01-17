@@ -6,13 +6,22 @@ import pathlib
 import glob
 
 import tkinter as tk
-from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT
+from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT, Grid
 from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
 window = tk.Tk()
 window.geometry("800x600")
+window.minsize(800, 600)
 window.title("Annotate the cars!")
+
+
+# Specify Grid
+Grid.rowconfigure(window, 0, weight=0)
+Grid.columnconfigure(window, 0, weight=0)
+
+Grid.rowconfigure(window, 1, weight=0)
+Grid.columnconfigure(window, 1, weight=1)
 
 
 class Annotator:
@@ -22,6 +31,12 @@ class Annotator:
     img_list = []
     img_index = 0
 
+    select_value_make = None
+    select_value_model = None
+    select_value_inout = None
+    select_value_newold = None
+    select_value_prepost = None
+
     def __init__(self):
         print("Annotator initialized")
 
@@ -30,6 +45,8 @@ class Annotator:
             level=logging.INFO,
             format="\n%(asctime)s %(message)s\n",
         )
+
+        window.unbind('<Control-k>')
 
         self.initialize_menu()
 
@@ -53,6 +70,8 @@ class Annotator:
 
     def display_schema(self):
 
+        # TODO here we need to make the various car section clickable so we can define which part is damaged and how severe is the damage.
+        # For instance, it could be a cycle (on each section) to change a square from white (no dmg), to yellow (low dmg), to red (medium dmg), to black (strong dmg)
         image = PhotoImage(file=pathlib.Path("media", "car_schema.png"))
 
         label = Label(image=image)
@@ -103,30 +122,33 @@ class Annotator:
         select["values"] = values
         select.grid(column=pX + 1, row=pY)
         select.current(current_index)
-        select.focus_set()
+
+        select.focus_set()  # automatically refocus the first selectbox when changing the image
+
+        return n
 
     def display_brand_select(self):
 
         # TODO we need to load the brands from an external file (xml ?)
-        self.display_select("The make of the car:", ("Undefined", "Honda", "BMW", "Renaud"), pX=2, pY=3, current_index=0)
+        self.select_value_make = self.display_select("The make of the car:", ("Undefined", "Honda", "BMW", "Renaud"), pX=2, pY=3, current_index=0)
 
     def display_model_select(self):
 
         # TODO we need to load the modes from an external file (xml ?)
         # and change it accordingly to the selected brand
-        self.display_select("The model of the car:", ("Undefined", "M1", "M2", "M3", "M4"), pX=2, pY=4, current_index=0)
+        self.select_value_model = self.display_select("The model of the car:", ("Undefined", "M1", "M2", "M3", "M4"), pX=2, pY=4, current_index=0)
 
     def display_inout_select(self):
 
-        self.display_select("The context of the photo:", ("Outside", "Inside"), pX=2, pY=5, current_index=0)
+        self.select_value_inout = self.display_select("The context of the photo:", ("Outside", "Inside"), pX=2, pY=5, current_index=0)
 
     def display_newold_select(self):
 
-        self.display_select("The condition of the car:", ("Undefined", "Old", "New"), pX=2, pY=6, current_index=0)
+        self.select_value_newold = self.display_select("The condition of the car:", ("Undefined", "Old", "New"), pX=2, pY=6, current_index=0)
 
     def display_prepost_select(self):
 
-        self.display_select("Pre-loss or post-loss:", ("post-loss", "pre-loss"), pX=2, pY=7, current_index=0)
+        self.select_value_prepost = self.display_select("Pre-loss or post-loss:", ("post-loss", "pre-loss"), pX=2, pY=7, current_index=0)
 
     def display_nextpass_buttons(self):
         pX, pY = 3, 8
@@ -145,7 +167,7 @@ class Annotator:
 
         # Create buttons
         button_save = Button(f1, text="Save", image=self.img_checkmark, compound=LEFT, command=self.action_save)
-        button_skip = Button(f1, text="Skip", image=self.img_crossmark, compound=LEFT, command=self.action_skip)
+        button_skip = Button(f1, text="Skip (CTRL+K)", image=self.img_crossmark, compound=LEFT, command=self.action_skip)
 
         # Position buttons into the frame
         button_save.pack(side="left")
@@ -154,18 +176,22 @@ class Annotator:
         # Position the frame into the grid
         f1.grid(column=pX, row=pY)
 
+        # Add keyboard bindings
+        window.bind('<Control-k>', self.action_skip)
+
     # --- ACTION FUNCTIONS (BUTTONS)
 
-    def action_skip(self):
+    def action_skip(self, key=None):
         print("SKIP")
-        self.img_index += 1
-        try:
-            self.display_current_car()
-        except IndexError:
-            print("ALL IMAGES HAVE BEEN REVIEWED")
+        self.get_next_car()
 
     def action_save(self):
         print("SAVE")
+        try:
+            self.collect_car_inputs()
+            self.get_next_car()
+        except Exception:
+            print("An error occured while collecting the data")
 
     def action_select_input(self):
         self.input_folder = self.select_folder(title="Select the input directory")
@@ -177,6 +203,13 @@ class Annotator:
         logging.info(f"TARGET FOLDER: {self.output_folder}")
 
     # --- GENERIC FUNCTIONS
+
+    def get_next_car(self):
+        try:
+            self.img_index += 1
+            self.display_current_car()
+        except IndexError:
+            print("ALL IMAGES HAVE BEEN REVIEWED")
 
     def select_folder(self, title):
         return filedialog.askdirectory(title=title)
@@ -200,6 +233,18 @@ class Annotator:
             return
 
         self.display_current_car()
+
+    def collect_car_inputs(self):
+
+        # TODO here we need to save the data in a dataframe and export it as a CSV
+        # we also need to save the input image as a new image in the output folder with the right naming convention
+        print("COLLECT DATA")
+        print(self.select_value_make.get())
+        print(self.select_value_model.get())
+        print(self.select_value_inout.get())
+        print(self.select_value_newold.get())
+        print(self.select_value_prepost.get())
+        print("DONE")
 
 
 # -- Initialize the main class
