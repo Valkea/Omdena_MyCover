@@ -45,7 +45,7 @@ class Annotator:
         input_button.grid(row=pY, column=pX + 1)
 
         # Exit the program
-        exit_button = Button(text="Exit Game", command=window.destroy)
+        exit_button = Button(text="Exit", command=window.destroy)
         exit_button.grid(row=pY, column=pX + 2)
 
     def select_folder(self):
