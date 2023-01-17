@@ -95,6 +95,12 @@ class Annotator:
 
     def display_current_car(self):
 
+        # Check if the picture is already in the dataframe
+        filename = pathlib.Path(self.img_list[self.img_index]).stem
+        if filename in self.dataframe.oldname.values or filename in self.dataframe.newname.values:
+            self.get_next_car()
+            return None
+
         pX, pY = 2, 0
 
         img_src = Image.open(self.img_list[self.img_index])
@@ -203,13 +209,22 @@ class Annotator:
         self.input_folder = self.select_folder(title="Select the input directory")
         self.output_folder = self.input_folder
         logging.info(f"SOURCE FOLDER: {self.input_folder}")
+        self.load_previous_dataframe()
         self.get_images_list()
 
     def action_select_output(self):
         self.output_folder = self.select_folder(title="Select the output directory")
         logging.info(f"TARGET FOLDER: {self.output_folder}")
+        self.load_previous_dataframe()
 
     # --- GENERIC FUNCTIONS
+
+    def load_previous_dataframe(self):
+        filename = "annotations.csv"
+        filepath = pathlib.Path(self.output_folder, filename)
+        if filepath.exists():
+            print("Load_previous_dataframe")
+            self.dataframe = pd.read_csv(filepath)
 
     def get_next_car(self):
         try:
@@ -242,11 +257,6 @@ class Annotator:
         self.display_current_car()
 
     def collect_car_inputs(self):
-
-        file = pathlib.Path(self.output_folder, 'annotations.csv')
-        if file.exists():
-            print("File exist")
-            self.dataframe = pd.read_csv(pathlib.Path(self.output_folder, 'annotations.csv'))
 
         # TODO here we need to save the data in a dataframe and export it as a CSV
         # we also need to save the input image as a new image in the output folder with the right naming convention
