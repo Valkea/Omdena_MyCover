@@ -6,7 +6,7 @@ import pathlib
 import glob
 
 import tkinter as tk
-from tkinter import PhotoImage, Label, Button, Entry, filedialog
+from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT
 from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
@@ -76,6 +76,7 @@ class Annotator:
         self.display_model_select()
         self.display_inout_select()
         self.display_newold_select()
+        self.display_nextpass_buttons()
 
     def display_schema(self):
 
@@ -121,6 +122,7 @@ class Annotator:
         select["values"] = values
         select.grid(column=pX + 1, row=pY)
         select.current(current_index)
+        select.focus_set()
 
     def display_brand_select(self):
 
@@ -205,6 +207,32 @@ class Annotator:
         # select_newold["values"] = ("Undefined", "New", "Old")
         # select_newold.grid(column=pX + 1, row=pY)
         # select_newold.current(0)
+
+    def display_nextpass_buttons(self):
+        pX, pY = 3, 7
+
+        # Load icons 
+        img_src = Image.open(pathlib.Path("media", "checkmark_button.png"))
+        img_resized = img_src.resize((50, 50), Image.LANCZOS)
+        self.img_checkmark = ImageTk.PhotoImage(img_resized)
+
+        img_src = Image.open(pathlib.Path("media", "crossmark_button.png"))
+        img_resized = img_src.resize((50, 50), Image.LANCZOS)
+        self.img_crossmark = ImageTk.PhotoImage(img_resized)
+
+        # Regroup buttons in the same grid cell using a frame
+        f1 = tk.Frame(window)
+
+        # Create buttons
+        button_save = Button(f1, text="Save", image=self.img_checkmark, compound=LEFT, command=window.destroy)
+        button_skip = Button(f1, text="Skip", image=self.img_crossmark, compound=LEFT, command=window.destroy)
+
+        # Position buttons into the frame
+        button_save.pack(side="left")
+        button_skip.pack(side="right")
+
+        # Position the frame into the grid
+        f1.grid(column=pX, row=pY)
 
 
 # -- Initialize the main class
