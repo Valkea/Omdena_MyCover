@@ -48,6 +48,40 @@ class Annotator:
         columns=["make", "model", "inout", "newold", "prepost", "oldname", "newname"]
     )
 
+    checkbox_values = {}
+    checkbox_coords = (
+        (145, 12),
+        (145, 30),
+        (145, 80),
+        (145, 150),
+        (60, 100),
+        (225, 100),
+        (15, 120),
+        (265, 120),
+        (145, 260),
+        (15, 260),
+        (270, 260),
+        (15, 440),
+        (270, 440),
+        (145, 515),
+        (60, 55),
+        (225, 55),
+        (80, 490),
+        (205, 490),
+        (40, 220),
+        (245, 220),
+        (40, 300),
+        (245, 300),
+        (60, 390),
+        (225, 390),
+        (145, 420),
+        (145, 480),
+        (80, 220),
+        (205, 220),
+        (80, 300),
+        (205, 300),
+    )
+
     def __init__(self):
         print("Annotator initialized")
 
@@ -116,6 +150,20 @@ class Annotator:
         label.image = image
         label.grid(column=0, row=0)
 
+        for i, (x, y) in enumerate(self.checkbox_coords):
+            self.checkbox_values[i] = tk.IntVar()
+            tk.Checkbutton(
+                self.left_frame,
+                text=i + 1,
+                variable=self.checkbox_values[i],
+                onvalue=1,
+                offvalue=0,
+                # command=self.checkit,
+            ).place(x=x, y=y, anchor="nw")
+
+    # def checkit(self):
+    #    print("checkit:", self.checkbox_values[1].get())
+
     def display_current_car(self):
 
         # Check if the picture is already in the annotation's dataframe
@@ -157,7 +205,8 @@ class Annotator:
         self.select_value_make = self.create_select(
             "The make of the car:",
             ("Undefined", "Honda", "BMW", "Renaud"),
-            pX=pX, pY=pY + 1,
+            pX=pX,
+            pY=pY + 1,
             current_index=0,
         )
 
@@ -167,7 +216,8 @@ class Annotator:
         self.select_value_model = self.create_select(
             "The model of the car:",
             ("Undefined", "M1", "M2", "M3", "M4"),
-            pX=pX, pY=pY + 2,
+            pX=pX,
+            pY=pY + 2,
             current_index=0,
         )
 
@@ -175,7 +225,8 @@ class Annotator:
         self.select_value_inout = self.create_select(
             "The context of the photo:",
             ("Outside", "Inside"),
-            pX=pX, pY=pY + 3,
+            pX=pX,
+            pY=pY + 3,
             current_index=0,
         )
 
@@ -183,7 +234,8 @@ class Annotator:
         self.select_value_newold = self.create_select(
             "The condition of the car:",
             ("Undefined", "Old", "New"),
-            pX=pX, pY=pY + 4,
+            pX=pX,
+            pY=pY + 4,
             current_index=0,
         )
 
@@ -191,7 +243,8 @@ class Annotator:
         self.select_value_prepost = self.create_select(
             "Pre-loss or post-loss:",
             ("post-loss", "pre-loss"),
-            pX=pX, pY=pY + 5,
+            pX=pX,
+            pY=pY + 5,
             current_index=0,
         )
 
