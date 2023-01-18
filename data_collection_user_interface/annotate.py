@@ -6,7 +6,7 @@ import pathlib
 import glob
 
 import tkinter as tk
-from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT, Grid
+from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT
 from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
@@ -17,17 +17,17 @@ window.geometry("800x600")
 window.minsize(800, 600)
 window.title("Annotate the cars!")
 
-ico = Image.open(pathlib.Path('media', 'icon.ico'))
+ico = Image.open(pathlib.Path("media", "icon.ico"))
 photo = ImageTk.PhotoImage(ico)
 window.wm_iconphoto(False, photo)
 
 
 # Specify Grid
-Grid.rowconfigure(window, 0, weight=0)
-Grid.columnconfigure(window, 0, weight=0)
-
-Grid.rowconfigure(window, 1, weight=0)
-Grid.columnconfigure(window, 1, weight=1)
+# Grid.rowconfigure(window, 0, weight=1)
+# Grid.columnconfigure(window, 0, weight=1)
+#
+# Grid.rowconfigure(window, 1, weight=1)
+# Grid.columnconfigure(window, 1, weight=1)
 
 
 class Annotator:
@@ -36,6 +36,7 @@ class Annotator:
     output_folder = None
     img_list = []
     img_index = 0
+    img_label = None
 
     select_value_make = None
     select_value_model = None
@@ -43,7 +44,9 @@ class Annotator:
     select_value_newold = None
     select_value_prepost = None
 
-    dataframe = pd.DataFrame(columns=['make', 'model', 'inout', 'newold', 'prepost', 'oldname', 'newname'])
+    dataframe = pd.DataFrame(
+        columns=["make", "model", "inout", "newold", "prepost", "oldname", "newname"]
+    )
 
     def __init__(self):
         print("Annotator initialized")
@@ -54,27 +57,54 @@ class Annotator:
             format="\n%(asctime)s %(message)s\n",
         )
 
-        window.unbind('<Control-k>')
+        window.unbind("<Control-k>")
 
+        self.initialize_frames()
         self.initialize_menu()
 
-    # --- DISPLAY FUNCTIONS
+    def initialize_frames(self):
+
+        self.menu_frame = tk.Frame(
+            window, width=800, height=50, bg="lightgrey", padx=10, pady=5
+        )
+        self.menu_frame.pack(fill="x", expand=False, side="bottom")
+
+        self.left_frame = tk.Frame(
+            window, width=200, height=550, bg="orange", padx=10, pady=5
+        )
+        self.left_frame.pack(fill="y", expand=False, side="left")
+
+        self.right_frame = tk.Frame(
+            window, width=580, height=550, bg="grey", padx=10, pady=5
+        )
+        self.right_frame.pack(fill="both", expand=True, side="left")
+
+        self.img_frame = tk.Frame(self.right_frame, bg="lightgrey", padx=10, pady=5)
+        self.img_frame.pack(fill="both", expand=True, side="top")
+
+        self.form_frame = tk.Frame(self.right_frame, bg="lightgrey", padx=10, pady=5)
+        self.form_frame.pack(fill="x", expand=False, side="top")
+
+        self.buttons_frame = tk.Frame(self.right_frame, bg="lightgrey", padx=10, pady=5)
+        self.buttons_frame.pack(fill="x", expand=False, side="top")
 
     def initialize_menu(self):
 
-        pX, pY = 0, 11
+        Button(
+            self.menu_frame,
+            text="Select input folder",
+            command=self.action_select_input,
+        ).pack(side="left")
 
-        # Select input folder
-        input_button = Button(text="Select input folder", command=self.action_select_input)
-        input_button.grid(row=pY, column=pX)
+        Button(
+            self.menu_frame,
+            text="Select output folder",
+            command=self.action_select_output,
+        ).pack(side="left")
 
-        # Select ouput folder
-        input_button = Button(text="Select output folder", command=self.action_select_output)
-        input_button.grid(row=pY, column=pX + 1)
+        Button(self.menu_frame, text="Exit", command=window.destroy).pack(side="right")
 
-        # Exit the program
-        exit_button = Button(text="Exit", command=window.destroy)
-        exit_button.grid(row=pY, column=pX + 2)
+    # --- DISPLAY FUNCTIONS
 
     def display_schema(self):
 
@@ -82,90 +112,92 @@ class Annotator:
         # For instance, it could be a cycle (on each section) to change a square from white (no dmg), to yellow (low dmg), to red (medium dmg), to black (strong dmg)
         image = PhotoImage(file=pathlib.Path("media", "car_schema.png"))
 
-        label = Label(image=image)
+        label = Label(self.left_frame, image=image)
         label.image = image
-        label.grid(column=0, row=0, rowspan=10, columnspan=2)
-        # btn_nr = -1
-        # btns = []
-        # btns.append(Button(window, image=image, command=lambda: self.click_part))
-
-        # btn_nr = 0
-        # btns[btn_nr].grid(row=1, column=btn_nr)
-        # btns[btn_nr].img = image  # keep a reference so it's not garbage collected
+        label.grid(column=0, row=0)
 
     def display_current_car(self):
 
-        # Check if the picture is already in the dataframe
+        # Check if the picture is already in the annotation's dataframe
         filename = pathlib.Path(self.img_list[self.img_index]).stem
-        if filename in self.dataframe.oldname.values or filename in self.dataframe.newname.values:
+        if (
+            filename in self.dataframe.oldname.values
+            or filename in self.dataframe.newname.values
+        ):
             self.get_next_car()
             return None
 
-        pX, pY = 2, 0
-
+        # Otherwise...
         img_src = Image.open(self.img_list[self.img_index])
-        img_resized = img_src.resize((300, 205), Image.LANCZOS)
+        h, w = img_src.size
+        max_size = self.img_frame.winfo_height()
+        max_v = max(h, w, max_size)
+        ratio = max_size / max_v
+
+        img_resized = img_src.resize((int(h * ratio), int(w * ratio)), Image.LANCZOS)
         img_display = ImageTk.PhotoImage(img_resized)
 
-        label1 = Label(image=img_display)
-        label1.image = img_display
-        label1.grid(column=pX, row=pY, columnspan=2, rowspan=2)
-        # label1.place(x=350, y=25)
+        self.clear_frame(self.img_frame)
+
+        self.img_label = Label(self.img_frame, image=img_display)
+        self.img_label.image = img_display
+        self.img_label.pack(fill="both", expand=True, side="top")
 
         self.display_schema()
-        self.display_brand_select()
-        self.display_model_select()
-        self.display_inout_select()
-        self.display_newold_select()
-        self.display_prepost_select()
-        self.display_nextpass_buttons()
+        self.display_form()
 
-    def display_select(self, label_txt, values, pX, pY, current_index=0):
+    def display_form(self):
 
-        # label
-        label = Label(
-            window, text=label_txt,  # font=("Times New Roman", 10)
-        )
-        label.grid(column=pX, row=pY, padx=10, pady=5)
+        pX, pY = 0, 0
 
-        # Combobox creation
-        n = tk.StringVar()
-        select = Combobox(window, width=27, textvariable=n)
+        self.clear_frame(self.form_frame)
 
-        # Adding combobox drop down list
-        select["values"] = values
-        select.grid(column=pX + 1, row=pY)
-        select.current(current_index)
-
-        select.focus_set()  # automatically refocus the first selectbox when changing the image
-
-        return n
-
-    def display_brand_select(self):
-
+        # BRAND_SELECT
         # TODO we need to load the brands from an external file (xml ?)
-        self.select_value_make = self.display_select("The make of the car:", ("Undefined", "Honda", "BMW", "Renaud"), pX=2, pY=3, current_index=0)
+        self.select_value_make = self.create_select(
+            "The make of the car:",
+            ("Undefined", "Honda", "BMW", "Renaud"),
+            pX=pX, pY=pY + 1,
+            current_index=0,
+        )
 
-    def display_model_select(self):
-
+        # MODEL_SELECT
         # TODO we need to load the modes from an external file (xml ?)
         # and change it accordingly to the selected brand
-        self.select_value_model = self.display_select("The model of the car:", ("Undefined", "M1", "M2", "M3", "M4"), pX=2, pY=4, current_index=0)
+        self.select_value_model = self.create_select(
+            "The model of the car:",
+            ("Undefined", "M1", "M2", "M3", "M4"),
+            pX=pX, pY=pY + 2,
+            current_index=0,
+        )
 
-    def display_inout_select(self):
+        # INOUT_SELECT
+        self.select_value_inout = self.create_select(
+            "The context of the photo:",
+            ("Outside", "Inside"),
+            pX=pX, pY=pY + 3,
+            current_index=0,
+        )
 
-        self.select_value_inout = self.display_select("The context of the photo:", ("Outside", "Inside"), pX=2, pY=5, current_index=0)
+        # NEWOLD_SELECT
+        self.select_value_newold = self.create_select(
+            "The condition of the car:",
+            ("Undefined", "Old", "New"),
+            pX=pX, pY=pY + 4,
+            current_index=0,
+        )
 
-    def display_newold_select(self):
+        # PREPOST_SELECT
+        self.select_value_prepost = self.create_select(
+            "Pre-loss or post-loss:",
+            ("post-loss", "pre-loss"),
+            pX=pX, pY=pY + 5,
+            current_index=0,
+        )
 
-        self.select_value_newold = self.display_select("The condition of the car:", ("Undefined", "Old", "New"), pX=2, pY=6, current_index=0)
-
-    def display_prepost_select(self):
-
-        self.select_value_prepost = self.display_select("Pre-loss or post-loss:", ("post-loss", "pre-loss"), pX=2, pY=7, current_index=0)
+        self.display_nextpass_buttons()
 
     def display_nextpass_buttons(self):
-        pX, pY = 3, 8
 
         # Load icons
         img_src = Image.open(pathlib.Path("media", "checkmark_button.png"))
@@ -176,22 +208,30 @@ class Annotator:
         img_resized = img_src.resize((50, 50), Image.LANCZOS)
         self.img_crossmark = ImageTk.PhotoImage(img_resized)
 
-        # Regroup buttons in the same grid cell using a frame
-        f1 = tk.Frame(window)
-
         # Create buttons
-        button_save = Button(f1, text="Save", image=self.img_checkmark, compound=LEFT, command=self.action_save)
-        button_skip = Button(f1, text="Skip (CTRL+K)", image=self.img_crossmark, compound=LEFT, command=self.action_skip)
+        self.clear_frame(self.buttons_frame)
+
+        button_save = Button(
+            self.buttons_frame,
+            text="Save",
+            image=self.img_checkmark,
+            compound=LEFT,
+            command=self.action_save,
+        )
+        button_skip = Button(
+            self.buttons_frame,
+            text="Skip (CTRL+K)",
+            image=self.img_crossmark,
+            compound=LEFT,
+            command=self.action_skip,
+        )
 
         # Position buttons into the frame
         button_save.pack(side="left")
-        button_skip.pack(side="right")
-
-        # Position the frame into the grid
-        f1.grid(column=pX, row=pY)
+        button_skip.pack(side="left")
 
         # Add keyboard bindings
-        window.bind('<Control-k>', self.action_skip)
+        window.bind("<Control-k>", self.action_skip)
 
     # --- ACTION FUNCTIONS (BUTTONS)
 
@@ -201,6 +241,7 @@ class Annotator:
     def action_save(self):
         try:
             self.collect_car_inputs()
+            print("NEXT CAR")
             self.get_next_car()
         except Exception as e:
             logging.error(f"An error occured while collecting the data: {e}")
@@ -218,6 +259,32 @@ class Annotator:
         self.load_previous_dataframe()
 
     # --- GENERIC FUNCTIONS
+
+    def clear_frame(self, frame):
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+    def create_select(self, label_txt, values, pX, pY, current_index=0):
+
+        # label
+        label = Label(
+            self.form_frame,
+            text=label_txt,  # font=("Times New Roman", 10)
+        )
+        label.grid(column=pX, row=pY, padx=10, pady=5)
+
+        # Combobox creation
+        n = tk.StringVar()
+        select = Combobox(self.form_frame, width=27, textvariable=n)
+
+        # Adding combobox drop down list
+        select["values"] = values
+        select.grid(column=pX + 1, row=pY)
+        select.current(current_index)
+
+        select.focus_set()  # automatically refocus the first selectbox when changing the image
+
+        return n
 
     def load_previous_dataframe(self):
         filename = "annotations.csv"
@@ -273,14 +340,19 @@ class Annotator:
 
         file_name = pathlib.Path(self.img_list[self.img_index]).stem
 
-        new_entry = pd.DataFrame([{
-            'make': self.select_value_make.get(),
-            'model': self.select_value_model.get(),
-            'inout': self.select_value_inout.get(),
-            'newold': self.select_value_newold.get(),
-            'prepost': self.select_value_prepost.get(),
-            'oldname': file_name,
-            'newname': "TODO"}])
+        new_entry = pd.DataFrame(
+            [
+                {
+                    "make": self.select_value_make.get(),
+                    "model": self.select_value_model.get(),
+                    "inout": self.select_value_inout.get(),
+                    "newold": self.select_value_newold.get(),
+                    "prepost": self.select_value_prepost.get(),
+                    "oldname": file_name,
+                    "newname": "TODO",
+                }
+            ]
+        )
 
         self.dataframe = pd.concat([self.dataframe, new_entry])
 
