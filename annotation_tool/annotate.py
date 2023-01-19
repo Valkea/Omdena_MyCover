@@ -510,7 +510,7 @@ class Annotator:
 
         print("DATAFRAME:", self.dataframe)
 
-        self.dataframe.to_csv(pathlib.Path(self.output_folder, "annotations.csv"))
+        self.dataframe.to_csv(pathlib.Path(self.output_folder, "annotations.csv"), index=False)
 
 
 # -- Initialize the main class
