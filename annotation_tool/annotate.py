@@ -40,12 +40,13 @@ class Annotator:
 
     select_value_make = None
     select_value_model = None
+    select_value_year = None
     select_value_inout = None
     select_value_newold = None
     select_value_prepost = None
 
     dataframe = pd.DataFrame(
-        columns=["make", "model", "inout", "newold", "prepost", "oldname", "newname"]
+        columns=["make", "model", "year", "inout", "newold", "prepost", "oldname", "newname"]
     )
 
     checkbox_values = {}
@@ -205,7 +206,6 @@ class Annotator:
         self.select_value_make = self.create_select(
             "The make of the car:",
             (
-                "UNKNOWN",
                 "BMW",
                 "CHANGAN",
                 "CHEVROLET",
@@ -225,7 +225,8 @@ class Annotator:
                 "TESLA",
                 "TOYOTA",
                 "VOLKSWAGEN",
-                "Other",
+                "<Other>",
+                "<Unknown>",
             ),
             pX=pX,
             pY=pY + 1,
@@ -243,12 +244,21 @@ class Annotator:
             current_index=0,
         )
 
+        # YEAR SELECT
+        self.select_value_year = self.create_select(
+            "The year of the car:",
+            ['Unknown'] + list((x for x in reversed(range(1990, 2022 + 1)))),
+            pX=pX,
+            pY=pY + 3,
+            current_index=0,
+        )
+
         # INOUT_SELECT
         self.select_value_inout = self.create_select(
             "The context of the photo:",
             ("Outside", "Inside"),
             pX=pX,
-            pY=pY + 3,
+            pY=pY + 4,
             current_index=0,
         )
 
@@ -257,7 +267,7 @@ class Annotator:
             "The condition of the car:",
             ("Undefined", "Old", "New"),
             pX=pX,
-            pY=pY + 4,
+            pY=pY + 5,
             current_index=0,
         )
 
@@ -266,7 +276,7 @@ class Annotator:
             "Pre-loss or post-loss:",
             ("post-loss", "pre-loss"),
             pX=pX,
-            pY=pY + 5,
+            pY=pY + 6,
             current_index=0,
         )
 
@@ -420,6 +430,7 @@ class Annotator:
                 {
                     "make": self.select_value_make.get(),
                     "model": self.select_value_model.get(),
+                    "year": self.select_value_year.get(),
                     "inout": self.select_value_inout.get(),
                     "newold": self.select_value_newold.get(),
                     "prepost": self.select_value_prepost.get(),
