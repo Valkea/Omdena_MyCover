@@ -6,7 +6,7 @@ import pathlib
 import glob
 
 import tkinter as tk
-from tkinter import PhotoImage, Label, Button, Entry, filedialog, LEFT
+from tkinter import PhotoImage, Label, Button, Entry, Listbox, filedialog, LEFT, YES, END
 from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
@@ -46,42 +46,54 @@ class Annotator:
     select_value_prepost = None
 
     dataframe = pd.DataFrame(
-        columns=["make", "model", "year", "inout", "newold", "prepost", "oldname", "newname"]
+        columns=[
+            "make",
+            "model",
+            "year",
+            "inout",
+            "newold",
+            "prepost",
+            "damage_front",
+            "damage_rear",
+            "damage_side",
+            "oldname",
+            "newname",
+        ]
     )
 
-    checkbox_values = {}
-    checkbox_coords = (
-        (145, 12),
-        (145, 30),
-        (145, 80),
-        (145, 150),
-        (60, 100),
-        (225, 100),
-        (15, 120),
-        (265, 120),
-        (145, 260),
-        (15, 260),
-        (270, 260),
-        (15, 440),
-        (270, 440),
-        (145, 515),
-        (60, 55),
-        (225, 55),
-        (80, 490),
-        (205, 490),
-        (40, 220),
-        (245, 220),
-        (40, 300),
-        (245, 300),
-        (60, 390),
-        (225, 390),
-        (145, 420),
-        (145, 480),
-        (80, 220),
-        (205, 220),
-        (80, 300),
-        (205, 300),
-    )
+    # checkbox_values = {}
+    # checkbox_coords = (
+    #     (145, 12),
+    #     (145, 30),
+    #     (145, 80),
+    #     (145, 150),
+    #     (60, 100),
+    #     (225, 100),
+    #     (15, 120),
+    #     (265, 120),
+    #     (145, 260),
+    #     (15, 260),
+    #     (270, 260),
+    #     (15, 440),
+    #     (270, 440),
+    #     (145, 515),
+    #     (60, 55),
+    #     (225, 55),
+    #     (80, 490),
+    #     (205, 490),
+    #     (40, 220),
+    #     (245, 220),
+    #     (40, 300),
+    #     (245, 300),
+    #     (60, 390),
+    #     (225, 390),
+    #     (145, 420),
+    #     (145, 480),
+    #     (80, 220),
+    #     (205, 220),
+    #     (80, 300),
+    #     (205, 300),
+    # )
 
     def __init__(self):
         print("Annotator initialized")
@@ -151,19 +163,53 @@ class Annotator:
         label.image = image
         label.grid(column=0, row=0)
 
-        for i, (x, y) in enumerate(self.checkbox_coords):
-            self.checkbox_values[i] = tk.IntVar()
-            tk.Checkbutton(
-                self.left_frame,
-                text=i + 1,
-                variable=self.checkbox_values[i],
-                onvalue=1,
-                offvalue=0,
-                # command=self.checkit,
-            ).place(x=x, y=y, anchor="nw")
+        # for i, (x, y) in enumerate(self.checkbox_coords):
+        #     self.checkbox_values[i] = tk.IntVar()
+        #     tk.Checkbutton(
+        #         self.left_frame,
+        #         text=i + 1,
+        #         variable=self.checkbox_values[i],
+        #         onvalue=1,
+        #         offvalue=0,
+        #         # command=self.checkit,
+        #     ).place(x=x, y=y, anchor="nw")
+        # 
+        # def checkit(self):
+        #    print("checkit:", self.checkbox_values[1].get())
 
-    # def checkit(self):
-    #    print("checkit:", self.checkbox_values[1].get())
+        damage_types = [
+            "dent",
+            "scratch",
+            "crack/hole",
+            "corrosion/rust",
+            "paint crack/peel",
+            "glass shatter",
+            "tire flat",
+            "lamp broken",
+            "side mirror damage",
+        ]
+
+        self.front_damage_list = Listbox(self.left_frame, selectmode="multiple", height=len(damage_types), width=18)
+        self.front_damage_list.configure(exportselection=False)
+
+        self.rear_damage_list = Listbox(self.left_frame, selectmode="multiple", height=len(damage_types), width=18)
+        self.rear_damage_list.configure(exportselection=False)
+
+        self.side_damage_list = Listbox(self.left_frame, selectmode="multiple", height=len(damage_types), width=18)
+        self.side_damage_list.configure(exportselection=False)
+
+        # damage_list.pack(expand=YES, fill="both")
+
+        for dmg_index in range(len(damage_types)):
+            self.front_damage_list.insert(END, damage_types[dmg_index])
+            self.rear_damage_list.insert(END, damage_types[dmg_index])
+            self.side_damage_list.insert(END, damage_types[dmg_index])
+            # coloring alternative lines of listbox
+            # damage_list.itemconfig(dmg_index, bg="orange" if dmg_index % 2 == 0 else "yellow")
+
+        self.front_damage_list.place(x=83, y=25, anchor="nw")
+        self.rear_damage_list.place(x=83, y=200, anchor="nw")
+        self.side_damage_list.place(x=83, y=375, anchor="nw")
 
     def display_current_car(self):
 
@@ -247,7 +293,7 @@ class Annotator:
         # YEAR SELECT
         self.select_value_year = self.create_select(
             "The year of the car:",
-            ['Unknown'] + list((x for x in reversed(range(1990, 2022 + 1)))),
+            ["Unknown"] + list((x for x in reversed(range(1990, 2022 + 1)))),
             pX=pX,
             pY=pY + 3,
             current_index=0,
@@ -419,6 +465,10 @@ class Annotator:
         print(f"Inside/Outisde: {self.select_value_inout.get()}")
         print(f"New/Old: {self.select_value_newold.get()}")
         print(f"Pre/post-loss: {self.select_value_prepost.get()}")
+        print(f"Front damages: {self.front_damage_list.curselection()}")
+        print(f"Rear damages: {self.rear_damage_list.curselection()}")
+        print(f"Side damages: {self.side_damage_list.curselection()}")
+
         # TODO Collect damaged parts & severity
         print("New name & path: TODO")
         print("DONE")
@@ -434,6 +484,9 @@ class Annotator:
                     "inout": self.select_value_inout.get(),
                     "newold": self.select_value_newold.get(),
                     "prepost": self.select_value_prepost.get(),
+                    "damage_front": self.front_damage_list.curselection(),
+                    "damage_rear": self.rear_damage_list.curselection(),
+                    "damage_side": self.side_damage_list.curselection(),
                     "oldname": file_name,
                     "newname": "TODO",
                 }
