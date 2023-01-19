@@ -6,7 +6,17 @@ import pathlib
 import glob
 
 import tkinter as tk
-from tkinter import PhotoImage, Label, Button, Entry, Listbox, filedialog, LEFT, YES, END
+from tkinter import (
+    PhotoImage,
+    Label,
+    Button,
+    Entry,
+    Listbox,
+    filedialog,
+    LEFT,
+    YES,
+    END,
+)
 from tkinter.ttk import Combobox
 from PIL import ImageTk, Image
 
@@ -173,7 +183,7 @@ class Annotator:
         #         offvalue=0,
         #         # command=self.checkit,
         #     ).place(x=x, y=y, anchor="nw")
-        # 
+        #
         # def checkit(self):
         #    print("checkit:", self.checkbox_values[1].get())
 
@@ -189,13 +199,19 @@ class Annotator:
             "side mirror damage",
         ]
 
-        self.front_damage_list = Listbox(self.left_frame, selectmode="multiple", height=len(damage_types), width=18)
+        self.front_damage_list = Listbox(
+            self.left_frame, selectmode="multiple", height=len(damage_types), width=18
+        )
         self.front_damage_list.configure(exportselection=False)
 
-        self.rear_damage_list = Listbox(self.left_frame, selectmode="multiple", height=len(damage_types), width=18)
+        self.rear_damage_list = Listbox(
+            self.left_frame, selectmode="multiple", height=len(damage_types), width=18
+        )
         self.rear_damage_list.configure(exportselection=False)
 
-        self.side_damage_list = Listbox(self.left_frame, selectmode="multiple", height=len(damage_types), width=18)
+        self.side_damage_list = Listbox(
+            self.left_frame, selectmode="multiple", height=len(damage_types), width=18
+        )
         self.side_damage_list.configure(exportselection=False)
 
         # damage_list.pack(expand=YES, fill="both")
@@ -207,13 +223,31 @@ class Annotator:
             # coloring alternative lines of listbox
             # damage_list.itemconfig(dmg_index, bg="orange" if dmg_index % 2 == 0 else "yellow")
 
-        b1 = Button(self.left_frame, text="Front damages", command=lambda: self.display_damage_choices(self.front_damage_list, b1, 32, 75))
+        b1 = Button(
+            self.left_frame,
+            text="Front damages",
+            command=lambda: self.display_damage_choices(
+                self.front_damage_list, b1, 32, 75
+            ),
+        )
         b1.place(x=95, y=75, anchor="nw")
 
-        b2 = Button(self.left_frame, text="Side damages", command=lambda: self.display_damage_choices(self.side_damage_list, b2, 207, 250))
+        b2 = Button(
+            self.left_frame,
+            text="Side damages",
+            command=lambda: self.display_damage_choices(
+                self.side_damage_list, b2, 207, 250
+            ),
+        )
         b2.place(x=95, y=250, anchor="nw")
 
-        b3 = Button(self.left_frame, text="Rear damages", command=lambda: self.display_damage_choices(self.rear_damage_list, b3, 382, 420))
+        b3 = Button(
+            self.left_frame,
+            text="Rear damages",
+            command=lambda: self.display_damage_choices(
+                self.rear_damage_list, b3, 382, 420
+            ),
+        )
         b3.place(x=95, y=420, anchor="nw")
 
     def display_damage_choices(self, target, button, ylist, ybtn):
@@ -262,31 +296,33 @@ class Annotator:
 
         # BRAND_SELECT
         # TODO we need to load the brands from an external file (xml ?)
+        makes_list = (
+            "<Unknown>",
+            "BMW",
+            "CHANGAN",
+            "CHEVROLET",
+            "FIAT",
+            "HONDA",
+            "LEXUS",
+            "HYUNDAI",
+            "INNOSON",
+            "KIA",
+            "LAND ROVER",
+            "MAZDA",
+            "MERCEDEZ BENZ",
+            "MITSUBISHI",
+            "NISSAN",
+            "PEUGEOT",
+            "RENAULT",
+            "TESLA",
+            "TOYOTA",
+            "VOLKSWAGEN",
+            "<Other>",
+        )
+
         self.select_value_make = self.create_select(
             "The make of the car:",
-            (
-                "BMW",
-                "CHANGAN",
-                "CHEVROLET",
-                "FIAT",
-                "HONDA",
-                "LEXUS",
-                "HYUNDAI",
-                "INNOSON",
-                "KIA",
-                "LAND ROVER",
-                "MAZDA",
-                "MERCEDEZ BENZ",
-                "MITSUBISHI",
-                "NISSAN",
-                "PEUGEOT",
-                "RENAULT",
-                "TESLA",
-                "TOYOTA",
-                "VOLKSWAGEN",
-                "<Other>",
-                "<Unknown>",
-            ),
+            makes_list,
             pX=pX,
             pY=pY + 1,
             current_index=0,
@@ -510,7 +546,9 @@ class Annotator:
 
         print("DATAFRAME:", self.dataframe)
 
-        self.dataframe.to_csv(pathlib.Path(self.output_folder, "annotations.csv"), index=False)
+        self.dataframe.to_csv(
+            pathlib.Path(self.output_folder, "annotations.csv"), index=False
+        )
 
 
 # -- Initialize the main class
