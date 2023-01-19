@@ -131,11 +131,11 @@ class Annotator:
             command=self.action_select_input,
         ).pack(side="left")
 
-        Button(
-            self.menu_frame,
-            text="Select output folder",
-            command=self.action_select_output,
-        ).pack(side="left")
+        # Button(
+        #     self.menu_frame,
+        #     text="Select output folder",
+        #     command=self.action_select_output,
+        # ).pack(side="left")
 
         Button(self.menu_frame, text="Exit", command=window.destroy).pack(side="right")
 
