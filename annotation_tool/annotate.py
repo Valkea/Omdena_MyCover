@@ -207,9 +207,22 @@ class Annotator:
             # coloring alternative lines of listbox
             # damage_list.itemconfig(dmg_index, bg="orange" if dmg_index % 2 == 0 else "yellow")
 
-        self.front_damage_list.place(x=83, y=25, anchor="nw")
-        self.rear_damage_list.place(x=83, y=200, anchor="nw")
-        self.side_damage_list.place(x=83, y=375, anchor="nw")
+        b1 = Button(self.left_frame, text="Front damages", command=lambda: self.display_damage_choices(self.front_damage_list, b1, 32, 50))
+        b1.place(x=95, y=50, anchor="nw")
+
+        b2 = Button(self.left_frame, text="Side damages", command=lambda: self.display_damage_choices(self.side_damage_list, b2, 207, 250))
+        b2.place(x=95, y=250, anchor="nw")
+
+        b3 = Button(self.left_frame, text="Rear damages", command=lambda: self.display_damage_choices(self.rear_damage_list, b3, 382, 420))
+        b3.place(x=95, y=420, anchor="nw")
+
+    def display_damage_choices(self, target, button, ylist, ybtn):
+        if target.winfo_ismapped():
+            button.place(x=95, y=ybtn, anchor="nw")
+            target.place_forget()
+        else:
+            button.place_forget()
+            target.place(x=83, y=ylist, anchor="nw")
 
     def display_current_car(self):
 
