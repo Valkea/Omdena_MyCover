@@ -297,7 +297,7 @@ class Annotator:
         # and change it accordingly to the selected brand
         self.select_value_model = self.create_select(
             "The model of the car:",
-            ("Undefined", "M1", "M2", "M3", "M4"),
+            ("<Unknown>", "M1", "M2", "M3", "M4"),
             pX=pX,
             pY=pY + 2,
             current_index=0,
@@ -306,7 +306,7 @@ class Annotator:
         # YEAR SELECT
         self.select_value_year = self.create_select(
             "The year of the car:",
-            ["Unknown"] + list((x for x in reversed(range(1990, 2022 + 1)))),
+            ["<Unknown>"] + list((x for x in reversed(range(1990, 2022 + 1)))),
             pX=pX,
             pY=pY + 3,
             current_index=0,
@@ -324,7 +324,7 @@ class Annotator:
         # NEWOLD_SELECT
         self.select_value_newold = self.create_select(
             "The condition of the car:",
-            ("Undefined", "Old", "New"),
+            ("Old", "New", "<Unknown>"),
             pX=pX,
             pY=pY + 5,
             current_index=0,
