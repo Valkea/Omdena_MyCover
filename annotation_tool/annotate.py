@@ -207,8 +207,8 @@ class Annotator:
             # coloring alternative lines of listbox
             # damage_list.itemconfig(dmg_index, bg="orange" if dmg_index % 2 == 0 else "yellow")
 
-        b1 = Button(self.left_frame, text="Front damages", command=lambda: self.display_damage_choices(self.front_damage_list, b1, 32, 50))
-        b1.place(x=95, y=50, anchor="nw")
+        b1 = Button(self.left_frame, text="Front damages", command=lambda: self.display_damage_choices(self.front_damage_list, b1, 32, 75))
+        b1.place(x=95, y=75, anchor="nw")
 
         b2 = Button(self.left_frame, text="Side damages", command=lambda: self.display_damage_choices(self.side_damage_list, b2, 207, 250))
         b2.place(x=95, y=250, anchor="nw")
