@@ -1,6 +1,9 @@
 #! /usr/bin/env python3
 # coding: utf-8
 
+import os
+import sys
+import shutil
 import logging
 import pathlib
 import glob
@@ -55,6 +58,8 @@ class Annotator:
     select_value_newold = None
     select_value_prepost = None
 
+    username = "Undefined"
+
     dataframe = pd.DataFrame(
         columns=[
             "make",
@@ -70,6 +75,9 @@ class Annotator:
             "newname",
         ]
     )
+
+    output_selected_folder = "selected"
+    output_skipped_folder = "skipped"
 
     # checkbox_values = {}
     # checkbox_coords = (
@@ -416,6 +424,15 @@ class Annotator:
     # --- ACTION FUNCTIONS (BUTTONS)
 
     def action_skip(self, key=None):
+
+        old_file_path = pathlib.Path(self.img_list[self.img_index])
+        old_file_name = f"{old_file_path.stem}{old_file_path.suffix}"
+        new_file_path = pathlib.Path(
+            self.output_folder, self.output_skipped_folder, old_file_name
+        )
+
+        self.move_file(old_file_path, new_file_path)
+
         self.get_next_car()
 
     def action_save(self):
@@ -468,7 +485,7 @@ class Annotator:
 
     def load_previous_dataframe(self):
         filename = "annotations.csv"
-        filepath = pathlib.Path(self.output_folder, filename)
+        filepath = pathlib.Path(self.output_folder, self.output_selected_folder, filename)
         if filepath.exists():
             print("Load_previous_dataframe")
             self.dataframe = pd.read_csv(filepath)
@@ -522,33 +539,65 @@ class Annotator:
         print("New name & path: TODO")
         print("DONE")
 
-        file_name = pathlib.Path(self.img_list[self.img_index]).stem
+        v_make = self.select_value_make.get()
+        v_model = self.select_value_model.get()
+        v_year = self.select_value_year.get()
+        v_inout = self.select_value_inout.get()
+        v_newold = self.select_value_newold.get()
+        v_prepost = self.select_value_prepost.get()
 
+        old_file_path = pathlib.Path(self.img_list[self.img_index])
+        old_file_name = f"{old_file_path.stem}.{old_file_path.suffix}"
+        # [your name]_[make-model]_[other_attributes]_[exterior/interior]_[number]_[pre-loss/post-loss]
+        new_file_name = f"{self.username}_{v_make}_{v_model}_{v_year}_{v_newold}_{v_prepost}{old_file_path.suffix}"
+        new_file_path = pathlib.Path(
+            self.output_folder, self.output_selected_folder, new_file_name
+        )
+
+        # Move file to 'selected' folder
+        self.move_file(old_file_path, new_file_path)
+
+        # Add entry to the dataframe
         new_entry = pd.DataFrame(
             [
                 {
-                    "make": self.select_value_make.get(),
-                    "model": self.select_value_model.get(),
-                    "year": self.select_value_year.get(),
-                    "inout": self.select_value_inout.get(),
-                    "newold": self.select_value_newold.get(),
-                    "prepost": self.select_value_prepost.get(),
+                    "make": v_make,
+                    "model": v_model,
+                    "year": v_year,
+                    "inout": v_inout,
+                    "newold": v_newold,
+                    "prepost": v_prepost,
                     "damage_front": self.front_damage_list.curselection(),
                     "damage_rear": self.rear_damage_list.curselection(),
                     "damage_side": self.side_damage_list.curselection(),
-                    "oldname": file_name,
-                    "newname": "TODO",
+                    "oldname": old_file_name,
+                    "newname": new_file_name,
                 }
             ]
         )
 
         self.dataframe = pd.concat([self.dataframe, new_entry])
+        self.dataframe.to_csv(
+            pathlib.Path(
+                self.output_folder, self.output_selected_folder, "annotations.csv"
+            ),
+            index=False,
+        )
 
         print("DATAFRAME:", self.dataframe)
 
-        self.dataframe.to_csv(
-            pathlib.Path(self.output_folder, "annotations.csv"), index=False
-        )
+    def move_file(self, old_path, new_path):
+
+        selected_path = pathlib.Path(self.output_folder, self.output_selected_folder)
+        skipped_path = pathlib.Path(self.output_folder, self.output_skipped_folder)
+
+        if not os.path.exists(selected_path):
+            os.mkdir(selected_path)
+
+        if not os.path.exists(skipped_path):
+            os.mkdir(skipped_path)
+
+        shutil.move(old_path, new_path)
 
 
 # -- Initialize the main class
@@ -556,4 +605,14 @@ class Annotator:
 annotator = Annotator()
 
 if __name__ == "__main__":
-    window.mainloop()
+
+    try:
+        annotator.username = sys.argv[1]
+        print(f"Starting session for {annotator.username}")
+
+        window.mainloop()
+
+    except Exception:
+        print(
+            " please pass your name as first argument ==> python annotate.py 'Letremble Emmanuel'"
+        )
