@@ -7,7 +7,7 @@ import sys
 import shutil
 import logging
 import pathlib
-import datetime
+# import datetime
 
 import tkinter as tk
 from tkinter import (
@@ -18,6 +18,7 @@ from tkinter import (
     Listbox,
     filedialog,
     LEFT,
+    CENTER,
     YES,
     END,
 )
@@ -162,6 +163,12 @@ class Annotator:
         #     command=self.action_select_output,
         # ).pack(side="left")
 
+        self.img_label_name = Label(
+            self.menu_frame,
+            text="No current file",  # font=("Times New Roman", 10)
+        )
+        self.img_label_name.place(relx=.5, rely=.5, anchor=CENTER)
+
         Button(self.menu_frame, text="Exit", command=window.destroy).pack(side="right")
 
     # --- DISPLAY FUNCTIONS
@@ -290,6 +297,7 @@ class Annotator:
     def parse_file_name(self, filename):
         print(f"parsing: {filename}")
 
+        self.img_label_name.config(text=filename)
         r_year, r_make, r_inout, r_prepost = None, None, None, None
 
         for a, b in (('-', ''), ('pre_', 'pre'), ('post_', 'post'), ('exterior', 'outside'), ('interior', 'inside')):
@@ -310,8 +318,8 @@ class Annotator:
             elif word.lower() in self.prepost_list:
                 # print(" ########## C'est un prepost")
                 r_prepost = word.lower()
-            else:
-                print('')
+            # else:
+            #    print('')
 
         return r_year, r_make, r_inout, r_prepost
 
