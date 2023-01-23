@@ -218,8 +218,15 @@ class Annotator:
     def display_current_car(self, refresh_img_only=False):
 
         # Check if the picture is already in the annotation's dataframe
-        filepath = self.img_list[self.img_index]
-        filename = pathlib.Path(filepath).stem
+        filepath = self.get_current_car_image_path()
+
+        if filepath is None:
+            self.clear_frame(self.right_frame)
+            self.clear_frame(self.left_frame)
+            print("OUT")
+            return
+
+        filename = filepath.stem
         if (
             filename in self.dataframe.oldname.values
             or filename in self.dataframe.newname.values
@@ -381,7 +388,7 @@ class Annotator:
 
     def action_skip(self, key=None):
 
-        old_file_path = pathlib.Path(self.img_list[self.img_index])
+        old_file_path = self.get_current_car_image_path()
         old_file_name = f"{old_file_path.stem}{old_file_path.suffix}"
         new_file_path = pathlib.Path(
             self.output_folder, self.output_skipped_folder, old_file_name
@@ -417,6 +424,13 @@ class Annotator:
         for widget in frame.winfo_children():
             widget.destroy()
 
+    def get_current_car_image_path(self):
+        try:
+            return pathlib.Path(self.img_list[self.img_index])
+        except IndexError:
+            print("ALL IMAGES HAVE BEEN REVIEWED")
+            return None
+
     def create_select(self, label_txt, values, pX, pY, current_index=0):
 
         # label
@@ -449,6 +463,7 @@ class Annotator:
             self.dataframe = pd.read_csv(filepath)
 
     def get_next_car(self):
+
         try:
             self.img_index += 1
             self.display_current_car()
@@ -487,7 +502,7 @@ class Annotator:
         # TODO here we need to save the data in a dataframe and export it as a CSV
         # we also need to save the input image as a new image in the output folder with the right naming convention
         print("COLLECT DATA")
-        print(f"Image path: {self.img_list[self.img_index]}")
+        print(f"Image path: {str(self.get_current_car_image_path())}")
         print(f"Make: {self.select_value_make.get()}")
         print(f"Model: {self.select_value_model.get()}")
         print(f"Inside/Outisde: {self.select_value_inout.get()}")
@@ -508,7 +523,7 @@ class Annotator:
         v_newold = self.select_value_newold.get()
         v_prepost = self.select_value_prepost.get()
 
-        old_file_path = pathlib.Path(self.img_list[self.img_index])
+        old_file_path = pathlib.Path(str(self.get_current_car_image_path()))
         old_file_name = f"{old_file_path.stem}.{old_file_path.suffix}"
         # [your name]_[make-model]_[other_attributes]_[exterior/interior]_[number]_[pre-loss/post-loss]
         new_file_name = f"{self.username}_{v_make}_{v_model}_{v_year}_{v_newold}_{v_prepost}{old_file_path.suffix}"
