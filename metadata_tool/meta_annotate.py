@@ -30,7 +30,7 @@ import pandas as pd
 window = tk.Tk()
 window.geometry("800x600")
 window.minsize(800, 600)
-window.title("Annotate the cars!")
+window.title("Let's collect cars' metadatas!")
 
 ico = Image.open(pathlib.Path("media", "icon.ico"))
 photo = ImageTk.PhotoImage(ico)
