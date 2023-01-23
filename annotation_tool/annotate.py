@@ -6,7 +6,6 @@ import sys
 import shutil
 import logging
 import pathlib
-import glob
 
 import tkinter as tk
 from tkinter import (
@@ -45,8 +44,13 @@ window.wm_iconphoto(False, photo)
 
 class Annotator:
 
-    input_folder = None
+    username = "Undefined"
+
     output_folder = None
+    output_selected_folder = "selected"
+    output_skipped_folder = "skipped"
+    input_folder = None
+
     img_list = []
     img_index = 0
     img_label = None
@@ -57,8 +61,6 @@ class Annotator:
     select_value_inout = None
     select_value_newold = None
     select_value_prepost = None
-
-    username = "Undefined"
 
     dataframe = pd.DataFrame(
         columns=[
@@ -75,43 +77,6 @@ class Annotator:
             "newname",
         ]
     )
-
-    output_selected_folder = "selected"
-    output_skipped_folder = "skipped"
-
-    # checkbox_values = {}
-    # checkbox_coords = (
-    #     (145, 12),
-    #     (145, 30),
-    #     (145, 80),
-    #     (145, 150),
-    #     (60, 100),
-    #     (225, 100),
-    #     (15, 120),
-    #     (265, 120),
-    #     (145, 260),
-    #     (15, 260),
-    #     (270, 260),
-    #     (15, 440),
-    #     (270, 440),
-    #     (145, 515),
-    #     (60, 55),
-    #     (225, 55),
-    #     (80, 490),
-    #     (205, 490),
-    #     (40, 220),
-    #     (245, 220),
-    #     (40, 300),
-    #     (245, 300),
-    #     (60, 390),
-    #     (225, 390),
-    #     (145, 420),
-    #     (145, 480),
-    #     (80, 220),
-    #     (205, 220),
-    #     (80, 300),
-    #     (205, 300),
-    # )
 
     def __init__(self):
         print("Annotator initialized")
@@ -173,27 +138,11 @@ class Annotator:
 
     def display_schema(self):
 
-        # TODO here we need to make the various car section clickable so we can define which part is damaged and how severe is the damage.
-        # For instance, it could be a cycle (on each section) to change a square from white (no dmg), to yellow (low dmg), to red (medium dmg), to black (strong dmg)
         image = PhotoImage(file=pathlib.Path("media", "car_schema.png"))
 
         label = Label(self.left_frame, image=image)
         label.image = image
         label.grid(column=0, row=0)
-
-        # for i, (x, y) in enumerate(self.checkbox_coords):
-        #     self.checkbox_values[i] = tk.IntVar()
-        #     tk.Checkbutton(
-        #         self.left_frame,
-        #         text=i + 1,
-        #         variable=self.checkbox_values[i],
-        #         onvalue=1,
-        #         offvalue=0,
-        #         # command=self.checkit,
-        #     ).place(x=x, y=y, anchor="nw")
-        #
-        # def checkit(self):
-        #    print("checkit:", self.checkbox_values[1].get())
 
         damage_types = [
             "dent",
@@ -221,8 +170,6 @@ class Annotator:
             self.left_frame, selectmode="multiple", height=len(damage_types), width=18
         )
         self.side_damage_list.configure(exportselection=False)
-
-        # damage_list.pack(expand=YES, fill="both")
 
         for dmg_index in range(len(damage_types)):
             self.front_damage_list.insert(END, damage_types[dmg_index])
@@ -269,7 +216,8 @@ class Annotator:
     def display_current_car(self):
 
         # Check if the picture is already in the annotation's dataframe
-        filename = pathlib.Path(self.img_list[self.img_index]).stem
+        filepath = self.img_list[self.img_index]
+        filename = pathlib.Path(filepath).stem
         if (
             filename in self.dataframe.oldname.values
             or filename in self.dataframe.newname.values
@@ -278,23 +226,27 @@ class Annotator:
             return None
 
         # Otherwise...
-        img_src = Image.open(self.img_list[self.img_index])
-        h, w = img_src.size
-        max_size = self.img_frame.winfo_height()
-        max_v = max(h, w, max_size)
-        ratio = max_size / max_v
+        try:
+            img_src = Image.open(filepath)
+            h, w = img_src.size
+            max_size = self.img_frame.winfo_height()
+            max_v = max(h, w, max_size)
+            ratio = max_size / max_v
 
-        img_resized = img_src.resize((int(h * ratio), int(w * ratio)), Image.LANCZOS)
-        img_display = ImageTk.PhotoImage(img_resized)
+            img_resized = img_src.resize((int(h * ratio), int(w * ratio)), Image.LANCZOS)
+            img_display = ImageTk.PhotoImage(img_resized)
 
-        self.clear_frame(self.img_frame)
+            self.clear_frame(self.img_frame)
 
-        self.img_label = Label(self.img_frame, image=img_display)
-        self.img_label.image = img_display
-        self.img_label.pack(fill="both", expand=True, side="top")
+            self.img_label = Label(self.img_frame, image=img_display)
+            self.img_label.image = img_display
+            self.img_label.pack(fill="both", expand=True, side="top")
 
-        self.display_schema()
-        self.display_form()
+            self.display_schema()
+            self.display_form()
+        except IOError:
+            logging.error(f"The file '{filepath}' couldn't be opened (moved to skipped folder)")
+            self.action_skip()
 
     def display_form(self):
 
@@ -485,7 +437,9 @@ class Annotator:
 
     def load_previous_dataframe(self):
         filename = "annotations.csv"
-        filepath = pathlib.Path(self.output_folder, self.output_selected_folder, filename)
+        filepath = pathlib.Path(
+            self.output_folder, self.output_selected_folder, filename
+        )
         if filepath.exists():
             print("Load_previous_dataframe")
             self.dataframe = pd.read_csv(filepath)
@@ -502,14 +456,9 @@ class Annotator:
 
     def get_images_list(self):
 
-        extensions = ["jpg", "png"]
-
         try:
-            for extension in extensions:
-                images_paths = glob.glob(
-                    str(pathlib.Path(self.input_folder, f"*.{extension}"))
-                )
-                self.img_list.extend(images_paths)
+            images_paths = pathlib.Path(self.input_folder).glob("*.*")
+            self.img_list.extend(images_paths)
         except TypeError:
             pass
 
