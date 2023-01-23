@@ -2,10 +2,12 @@
 # coding: utf-8
 
 import os
+import re
 import sys
 import shutil
 import logging
 import pathlib
+import datetime
 
 import tkinter as tk
 from tkinter import (
@@ -78,6 +80,32 @@ class Annotator:
             "newname",
         ]
     )
+
+    makes_list = [
+        "<unknown>",
+        "BMW",
+        "CHANGAN",
+        "CHEVROLET",
+        "FIAT",
+        "HONDA",
+        "LEXUS",
+        "HYUNDAI",
+        "INNOSON",
+        "KIA",
+        "LAND ROVER",
+        "MAZDA",
+        "MERCEDEZ BENZ",
+        "MITSUBISHI",
+        "NISSAN",
+        "PEUGEOT",
+        "RENAULT",
+        "TESLA",
+        "TOYOTA",
+        "VOLKSWAGEN",
+        "<other>",
+    ]
+    inout_list = ["outside", "inside"]
+    prepost_list = ["preloss", "postloss"]
 
     def __init__(self):
         print("Annotator initialized")
@@ -259,44 +287,59 @@ class Annotator:
             logging.error(f"The file '{filepath}' couldn't be opened (moved to skipped folder)")
             self.action_skip()
 
+    def parse_file_name(self, filename):
+        print(f"parsing: {filename}")
+
+        r_year, r_make, r_inout, r_prepost = None, None, None, None
+
+        for a, b in (('-', ''), ('pre_', 'pre'), ('post_', 'post'), ('exterior', 'outside'), ('interior', 'inside')):
+            filename = filename.replace(a, b)
+
+        for word in filename.split('_'):
+            # print("===>", word, end='')
+            if bool(re.search(r'\d{4}', word)):
+                # print(" ########## C'est une date")
+                if 1989 < int(word) < 2050:
+                    r_year = word
+            elif word.upper() in self.makes_list:
+                # print(" ########## C'est une marque")
+                r_make = word.upper()
+            elif word.lower() in self.inout_list:
+                # print(" ########## C'est un inout")
+                r_inout = word.lower()
+            elif word.lower() in self.prepost_list:
+                # print(" ########## C'est un prepost")
+                r_prepost = word.lower()
+            else:
+                print('')
+
+        return r_year, r_make, r_inout, r_prepost
+
     def display_form(self):
 
         pX, pY = 0, 0
 
+        # Search infos in the file name
+        filename = self.get_current_car_image_path().stem
+        year, make, inout, prepost = self.parse_file_name(filename)
+
+        # Clear the form to remove old information
         self.clear_frame(self.form_frame)
 
         # BRAND_SELECT
         # TODO we need to load the brands from an external file (xml ?)
-        makes_list = (
-            "<Unknown>",
-            "BMW",
-            "CHANGAN",
-            "CHEVROLET",
-            "FIAT",
-            "HONDA",
-            "LEXUS",
-            "HYUNDAI",
-            "INNOSON",
-            "KIA",
-            "LAND ROVER",
-            "MAZDA",
-            "MERCEDEZ BENZ",
-            "MITSUBISHI",
-            "NISSAN",
-            "PEUGEOT",
-            "RENAULT",
-            "TESLA",
-            "TOYOTA",
-            "VOLKSWAGEN",
-            "<Other>",
-        )
+
+        try:
+            make_index = self.makes_list.index(make)
+        except Exception:
+            make_index = 0
 
         self.select_value_make = self.create_select(
             "The make of the car:",
-            makes_list,
+            self.makes_list,
             pX=pX,
             pY=pY + 1,
-            current_index=0,
+            current_index=make_index
         )
 
         # MODEL_SELECT
@@ -304,46 +347,63 @@ class Annotator:
         # and change it accordingly to the selected brand
         self.select_value_model = self.create_select(
             "The model of the car:",
-            ("<Unknown>", "M1", "M2", "M3", "M4"),
+            ("Write the model name", "<unknown>"),
             pX=pX,
             pY=pY + 2,
             current_index=0,
         )
 
         # YEAR SELECT
+        years_list = ["<unknown>"] + list((x for x in reversed(range(1990, 2022 + 1))))
+
+        try:
+            year_index = years_list.index(int(year))
+        except Exception:
+            year_index = 0
+
         self.select_value_year = self.create_select(
             "The year of the car:",
-            ["<Unknown>"] + list((x for x in reversed(range(1990, 2022 + 1)))),
+            years_list,
             pX=pX,
             pY=pY + 3,
-            current_index=0,
+            current_index=year_index,
         )
 
         # INOUT_SELECT
+        try:
+            inout_index = self.inout_list.index(inout)
+        except Exception:
+            inout_index = 0
+
         self.select_value_inout = self.create_select(
             "The context of the photo:",
-            ("Outside", "Inside"),
+            self.inout_list,
             pX=pX,
             pY=pY + 4,
-            current_index=0,
+            current_index=inout_index,
         )
 
         # NEWOLD_SELECT
         self.select_value_newold = self.create_select(
             "The condition of the car:",
-            ("Old", "New", "<Unknown>"),
+            ("old", "new", "<unknown>"),
             pX=pX,
             pY=pY + 5,
             current_index=0,
         )
 
         # PREPOST_SELECT
+        try:
+            prepost_index = self.prepost_list.index(prepost)
+        except Exception:
+            prepost_index = 0
+
         self.select_value_prepost = self.create_select(
             "Pre-loss or post-loss:",
-            ("post-loss", "pre-loss"),
+            self.prepost_list,
             pX=pX,
             pY=pY + 6,
-            current_index=0,
+            current_index=prepost_index,
         )
 
         self.display_nextpass_buttons()
@@ -515,6 +575,9 @@ class Annotator:
         # TODO Collect damaged parts & severity
         print("New name & path: TODO")
         print("DONE")
+
+        if self.select_value_model.get() == "Write the model name":
+            self.select_value_model.set("<unknown>")
 
         v_make = self.select_value_make.get()
         v_model = self.select_value_model.get()
