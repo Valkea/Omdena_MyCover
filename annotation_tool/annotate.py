@@ -54,6 +54,7 @@ class Annotator:
     img_list = []
     img_index = 0
     img_label = None
+    window_height = 600
 
     select_value_make = None
     select_value_model = None
@@ -88,6 +89,7 @@ class Annotator:
         )
 
         window.unbind("<Control-k>")
+        window.unbind("<Configure>")
 
         self.initialize_frames()
         self.initialize_menu()
@@ -213,7 +215,7 @@ class Annotator:
             button.place_forget()
             target.place(x=83, y=ylist, anchor="nw")
 
-    def display_current_car(self):
+    def display_current_car(self, refresh_img_only=False):
 
         # Check if the picture is already in the annotation's dataframe
         filepath = self.img_list[self.img_index]
@@ -229,7 +231,7 @@ class Annotator:
         try:
             img_src = Image.open(filepath)
             h, w = img_src.size
-            max_size = self.img_frame.winfo_height()
+            max_size = self.right_frame.winfo_height() - 200
             max_v = max(h, w, max_size)
             ratio = max_size / max_v
 
@@ -242,8 +244,10 @@ class Annotator:
             self.img_label.image = img_display
             self.img_label.pack(fill="both", expand=True, side="top")
 
-            self.display_schema()
-            self.display_form()
+            if refresh_img_only is False:
+                self.display_schema()
+                self.display_form()
+
         except IOError:
             logging.error(f"The file '{filepath}' couldn't be opened (moved to skipped folder)")
             self.action_skip()
@@ -468,6 +472,15 @@ class Annotator:
             return
 
         self.display_current_car()
+
+        # Bind resize
+        window.bind("<Configure>", self.resize)
+
+    def resize(self, event):
+
+        if self.right_frame.winfo_height() != self.window_height:
+            self.window_height = self.right_frame.winfo_height()
+            self.display_current_car(True)
 
     def collect_car_inputs(self):
 
