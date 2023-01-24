@@ -262,10 +262,28 @@ class Annotator:
         # Check if the picture is already in the annotation's dataframe
         filepath = self.get_current_car_image_path()
 
+        # self.left_frame.pack_propagate(0)
+        # self.right_frame.pack_propagate(0)
+
+        # Get the current screen width and height
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+
+        # Print the screen size
+        print("\nScreen width:", screen_width)
+        print("Screen height:", screen_height)
+
+        # Get the current screen width and height
+        app_width = window.winfo_width()
+        app_height = window.winfo_height()
+
+        # Print the screen size
+        print("App width:", app_width)
+        print("App height:", app_height)
+
         if filepath is None:
             self.clear_frame(self.right_frame)
             self.clear_frame(self.left_frame)
-            print("OUT")
             return
 
         filename = filepath.stem
@@ -280,7 +298,7 @@ class Annotator:
         try:
             img_src = Image.open(filepath)
             h, w = img_src.size
-            max_size = self.right_frame.winfo_height() - 200
+            max_size = app_height - 250
             max_v = max(h, w, max_size)
             ratio = max_size / max_v
 
@@ -296,7 +314,6 @@ class Annotator:
             self.img_label.pack(fill="both", expand=True, side="top")
 
             if refresh_img_only is False:
-                print("DEBUG:", self.reset_selectbox.get())
                 self.display_schema()
                 self.display_form()
 
