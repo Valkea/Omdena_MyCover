@@ -87,6 +87,18 @@ class Annotator:
         ]
     )
 
+    damage_types = [
+        "dent",
+        "scratch",
+        "crack/hole",
+        "corrosion/rust",
+        "paint crack/peel",
+        "glass shatter",
+        "tire flat",
+        "lamp broken",
+        "side mirror damage",
+    ]
+
     makes_list = [
         "unknown",
         "BMW",
@@ -188,37 +200,25 @@ class Annotator:
         label.image = image
         label.grid(column=0, row=0)
 
-        damage_types = [
-            "dent",
-            "scratch",
-            "crack/hole",
-            "corrosion/rust",
-            "paint crack/peel",
-            "glass shatter",
-            "tire flat",
-            "lamp broken",
-            "side mirror damage",
-        ]
-
         self.front_damage_list = Listbox(
-            self.left_frame, selectmode="multiple", height=len(damage_types), width=18
+            self.left_frame, selectmode="multiple", height=len(self.damage_types), width=18
         )
         self.front_damage_list.configure(exportselection=False)
 
         self.rear_damage_list = Listbox(
-            self.left_frame, selectmode="multiple", height=len(damage_types), width=18
+            self.left_frame, selectmode="multiple", height=len(self.damage_types), width=18
         )
         self.rear_damage_list.configure(exportselection=False)
 
         self.side_damage_list = Listbox(
-            self.left_frame, selectmode="multiple", height=len(damage_types), width=18
+            self.left_frame, selectmode="multiple", height=len(self.damage_types), width=18
         )
         self.side_damage_list.configure(exportselection=False)
 
-        for dmg_index in range(len(damage_types)):
-            self.front_damage_list.insert(END, damage_types[dmg_index])
-            self.rear_damage_list.insert(END, damage_types[dmg_index])
-            self.side_damage_list.insert(END, damage_types[dmg_index])
+        for dmg_index in range(len(self.damage_types)):
+            self.front_damage_list.insert(END, self.damage_types[dmg_index])
+            self.rear_damage_list.insert(END, self.damage_types[dmg_index])
+            self.side_damage_list.insert(END, self.damage_types[dmg_index])
             # coloring alternative lines of listbox
             # damage_list.itemconfig(dmg_index, bg="orange" if dmg_index % 2 == 0 else "yellow")
 
@@ -629,22 +629,7 @@ class Annotator:
 
     def collect_car_inputs(self):
 
-        # TODO here we need to save the data in a dataframe and export it as a CSV
-        # we also need to save the input image as a new image in the output folder with the right naming convention
         print("COLLECT DATA")
-        print(f"Image path: {str(self.get_current_car_image_path())}")
-        print(f"Make: {self.select_value_make.get()}")
-        print(f"Model: {self.select_value_model.get()}")
-        print(f"Inside/Outisde: {self.select_value_inout.get()}")
-        print(f"New/Old: {self.select_value_newold.get()}")
-        print(f"Pre/post-loss: {self.select_value_prepost.get()}")
-        print(f"Front damages: {self.front_damage_list.curselection()}")
-        print(f"Rear damages: {self.rear_damage_list.curselection()}")
-        print(f"Side damages: {self.side_damage_list.curselection()}")
-
-        # TODO Collect damaged parts & severity
-        print("New name & path: TODO")
-        print("DONE")
 
         if self.select_value_model.get() == "Write the model name":
             self.select_value_model.set("unknown")
@@ -668,6 +653,11 @@ class Annotator:
         # Move file to 'selected' folder
         self.move_file(old_file_path, new_file_path)
 
+        # Convert damage ids to damage labels
+        damage_front = [self.damage_types[x] for x in self.front_damage_list.curselection()]
+        damage_rear = [self.damage_types[x] for x in self.rear_damage_list.curselection()]
+        damage_side = [self.damage_types[x] for x in self.side_damage_list.curselection()]
+
         # Add entry to the dataframe
         new_entry = pd.DataFrame(
             [
@@ -678,9 +668,9 @@ class Annotator:
                     "inout": v_inout,
                     "newold": v_newold,
                     "prepost": v_prepost,
-                    "damage_front": self.front_damage_list.curselection(),
-                    "damage_rear": self.rear_damage_list.curselection(),
-                    "damage_side": self.side_damage_list.curselection(),
+                    "damage_front": damage_front,
+                    "damage_rear": damage_rear,
+                    "damage_side": damage_side,
                     "oldname": old_file_name,
                     "newname": new_file_name,
                 }
