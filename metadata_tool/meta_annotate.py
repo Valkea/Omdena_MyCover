@@ -7,6 +7,7 @@ import sys
 import shutil
 import logging
 import pathlib
+import time
 # import datetime
 
 import tkinter as tk
@@ -83,7 +84,7 @@ class Annotator:
     )
 
     makes_list = [
-        "<unknown>",
+        "unknown",
         "BMW",
         "CHANGAN",
         "CHEVROLET",
@@ -103,7 +104,7 @@ class Annotator:
         "TESLA",
         "TOYOTA",
         "VOLKSWAGEN",
-        "<other>",
+        "other",
     ]
     inout_list = ["outside", "inside"]
     prepost_list = ["preloss", "postloss"]
@@ -355,14 +356,14 @@ class Annotator:
         # and change it accordingly to the selected brand
         self.select_value_model = self.create_select(
             "The model of the car:",
-            ("Write the model name", "<unknown>"),
+            ("Write the model name", "unknown"),
             pX=pX,
             pY=pY + 2,
             current_index=0,
         )
 
         # YEAR SELECT
-        years_list = ["<unknown>"] + list((x for x in reversed(range(1990, 2022 + 1))))
+        years_list = ["unknown"] + list((x for x in reversed(range(1990, 2022 + 1))))
 
         try:
             year_index = years_list.index(int(year))
@@ -394,7 +395,7 @@ class Annotator:
         # NEWOLD_SELECT
         self.select_value_newold = self.create_select(
             "The condition of the car:",
-            ("old", "new", "<unknown>"),
+            ("old", "new", "unknown"),
             pX=pX,
             pY=pY + 5,
             current_index=0,
@@ -585,7 +586,7 @@ class Annotator:
         print("DONE")
 
         if self.select_value_model.get() == "Write the model name":
-            self.select_value_model.set("<unknown>")
+            self.select_value_model.set("unknown")
 
         v_make = self.select_value_make.get()
         v_model = self.select_value_model.get()
@@ -597,7 +598,8 @@ class Annotator:
         old_file_path = pathlib.Path(str(self.get_current_car_image_path()))
         old_file_name = f"{old_file_path.stem}.{old_file_path.suffix}"
         # [your name]_[make-model]_[other_attributes]_[exterior/interior]_[number]_[pre-loss/post-loss]
-        new_file_name = f"{self.username}_{v_make}_{v_model}_{v_year}_{v_newold}_{v_prepost}{old_file_path.suffix}"
+        uniqueid = int(time.mktime(time.localtime()))
+        new_file_name = f"{self.username}_{v_make}_{v_model}_{v_year}_{v_newold}_{v_prepost}_{uniqueid}{old_file_path.suffix}"
         new_file_path = pathlib.Path(
             self.output_folder, self.output_selected_folder, new_file_name
         )
