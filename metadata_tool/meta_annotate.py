@@ -8,6 +8,7 @@ import shutil
 import logging
 import pathlib
 import time
+
 # import datetime
 
 import tkinter as tk
@@ -17,6 +18,7 @@ from tkinter import (
     Button,
     Entry,
     Listbox,
+    Checkbutton,
     filedialog,
     LEFT,
     CENTER,
@@ -67,6 +69,8 @@ class Annotator:
     select_value_newold = None
     select_value_prepost = None
 
+    reset_selectbox = tk.IntVar(value=1)
+
     dataframe = pd.DataFrame(
         columns=[
             "make",
@@ -106,7 +110,9 @@ class Annotator:
         "VOLKSWAGEN",
         "other",
     ]
+    years_list = ["unknown"] + list((x for x in reversed(range(1990, 2022 + 1))))
     inout_list = ["outside", "inside"]
+    newold_list = ["old", "new", "unknown"]
     prepost_list = ["preloss", "postloss"]
 
     def __init__(self):
@@ -168,7 +174,7 @@ class Annotator:
             self.menu_frame,
             text="No current file",  # font=("Times New Roman", 10)
         )
-        self.img_label_name.place(relx=.5, rely=.5, anchor=CENTER)
+        self.img_label_name.place(relx=0.5, rely=0.5, anchor=CENTER)
 
         Button(self.menu_frame, text="Exit", command=window.destroy).pack(side="right")
 
@@ -278,7 +284,9 @@ class Annotator:
             max_v = max(h, w, max_size)
             ratio = max_size / max_v
 
-            img_resized = img_src.resize((int(h * ratio), int(w * ratio)), Image.LANCZOS)
+            img_resized = img_src.resize(
+                (int(h * ratio), int(w * ratio)), Image.LANCZOS
+            )
             img_display = ImageTk.PhotoImage(img_resized)
 
             self.clear_frame(self.img_frame)
@@ -288,11 +296,14 @@ class Annotator:
             self.img_label.pack(fill="both", expand=True, side="top")
 
             if refresh_img_only is False:
+                print("DEBUG:", self.reset_selectbox.get())
                 self.display_schema()
                 self.display_form()
 
         except IOError:
-            logging.error(f"The file '{filepath}' couldn't be opened (moved to skipped folder)")
+            logging.error(
+                f"The file '{filepath}' couldn't be opened (moved to skipped folder)"
+            )
             self.action_skip()
 
     def parse_file_name(self, filename):
@@ -301,12 +312,18 @@ class Annotator:
         self.img_label_name.config(text=filename)
         r_year, r_make, r_inout, r_prepost = None, None, None, None
 
-        for a, b in (('-', ''), ('pre_', 'pre'), ('post_', 'post'), ('exterior', 'outside'), ('interior', 'inside')):
+        for a, b in (
+            ("-", ""),
+            ("pre_", "pre"),
+            ("post_", "post"),
+            ("exterior", "outside"),
+            ("interior", "inside"),
+        ):
             filename = filename.replace(a, b)
 
-        for word in filename.split('_'):
+        for word in filename.split("_"):
             # print("===>", word, end='')
-            if bool(re.search(r'\d{4}', word)):
+            if bool(re.search(r"\d{4}", word)):
                 # print(" ########## C'est une date")
                 if 1989 < int(word) < 2050:
                     r_year = word
@@ -327,54 +344,83 @@ class Annotator:
     def display_form(self):
 
         pX, pY = 0, 0
+        make, model, year, inout, newold, prepost = None, None, None, None, None, None
 
         # Search infos in the file name
         filename = self.get_current_car_image_path().stem
         year, make, inout, prepost = self.parse_file_name(filename)
 
+        # Use previous values as default values of the select boxes
+        if self.reset_selectbox.get() == 1 and len(self.dataframe) > 0:
+            last_row = self.dataframe.iloc[-1]
+
+            if make is None:
+                make = last_row["make"]
+
+            if model is None:
+                model = last_row["model"]
+
+            if year is None:
+                year = last_row["year"]
+
+            if inout is None:
+                inout = last_row["inout"]
+
+            if newold is None:
+                newold = last_row["newold"]
+
+            if prepost is None:
+                prepost = last_row["prepost"]
+
         # Clear the form to remove old information
         self.clear_frame(self.form_frame)
 
         # BRAND_SELECT
-        # TODO we need to load the brands from an external file (xml ?)
+        makes_list = self.makes_list
+        if make is not None:
+            makes_list = [make] + makes_list
+            makes_list = list(dict.fromkeys(makes_list))  # remove duplicates & keep order
 
         try:
-            make_index = self.makes_list.index(make)
+            make_index = makes_list.index(make)
         except Exception:
             make_index = 0
 
         self.select_value_make = self.create_select(
-            "The make of the car:",
-            self.makes_list,
-            pX=pX,
-            pY=pY + 1,
-            current_index=make_index
+            "Make of the car:", makes_list, pX=pX, pY=pY + 1, current_index=make_index
         )
 
         # MODEL_SELECT
-        # TODO we need to load the modes from an external file (xml ?)
-        # and change it accordingly to the selected brand
+        model_list = ["Write the model name", "unknown"]
+        if model is not None:
+            model_list = [model] + model_list
+            model_list = list(dict.fromkeys(model_list))  # remove duplicates & keep order
+
+        try:
+            model_index = model_list.index(model)
+        except Exception:
+            model_index = 0
+
         self.select_value_model = self.create_select(
-            "The model of the car:",
-            ("Write the model name", "unknown"),
+            "Model of the car:",
+            model_list,
             pX=pX,
             pY=pY + 2,
-            current_index=0,
+            current_index=model_index,
         )
 
         # YEAR SELECT
-        years_list = ["unknown"] + list((x for x in reversed(range(1990, 2022 + 1))))
-
         try:
-            year_index = years_list.index(int(year))
+            year_index = self.years_list.index(int(year))
         except Exception:
             year_index = 0
 
         self.select_value_year = self.create_select(
-            "The year of the car:",
-            years_list,
+            "Year of the car:",
+            self.years_list,
             pX=pX,
             pY=pY + 3,
+            state="readonly",
             current_index=year_index,
         )
 
@@ -385,20 +431,27 @@ class Annotator:
             inout_index = 0
 
         self.select_value_inout = self.create_select(
-            "The context of the photo:",
+            "Context of the photo:",
             self.inout_list,
             pX=pX,
             pY=pY + 4,
+            state="readonly",
             current_index=inout_index,
         )
 
         # NEWOLD_SELECT
+        try:
+            newold_index = self.newold_list.index(newold)
+        except Exception:
+            newold_index = 0
+
         self.select_value_newold = self.create_select(
-            "The condition of the car:",
-            ("old", "new", "unknown"),
+            "Condition of the car:",
+            self.newold_list,
             pX=pX,
             pY=pY + 5,
-            current_index=0,
+            state="readonly",
+            current_index=newold_index,
         )
 
         # PREPOST_SELECT
@@ -412,6 +465,7 @@ class Annotator:
             self.prepost_list,
             pX=pX,
             pY=pY + 6,
+            state="readonly",
             current_index=prepost_index,
         )
 
@@ -431,24 +485,31 @@ class Annotator:
         # Create buttons
         self.clear_frame(self.buttons_frame)
 
-        button_save = Button(
+        Button(
             self.buttons_frame,
             text="Save",
             image=self.img_checkmark,
             compound=LEFT,
             command=self.action_save,
-        )
-        button_skip = Button(
+        ).pack(side="left")
+
+        Button(
             self.buttons_frame,
             text="Skip (CTRL+K)",
             image=self.img_crossmark,
             compound=LEFT,
             command=self.action_skip,
-        )
+        ).pack(side="left")
 
-        # Position buttons into the frame
-        button_save.pack(side="left")
-        button_skip.pack(side="left")
+        Checkbutton(
+            self.buttons_frame,
+            # text="Keep select\nboxes' values on\nthe next car.",
+            text="Keep current\nselect values\non next car.",
+            variable=self.reset_selectbox,
+            onvalue=1,
+            offvalue=0,
+            # command=print_selection
+        ).pack(side="left")
 
         # Add keyboard bindings
         window.bind("<Control-k>", self.action_skip)
@@ -500,7 +561,7 @@ class Annotator:
             print("ALL IMAGES HAVE BEEN REVIEWED")
             return None
 
-    def create_select(self, label_txt, values, pX, pY, current_index=0):
+    def create_select(self, label_txt, values, pX, pY, state=None, current_index=0):
 
         # label
         label = Label(
@@ -511,7 +572,7 @@ class Annotator:
 
         # Combobox creation
         n = tk.StringVar()
-        select = Combobox(self.form_frame, width=27, textvariable=n)
+        select = Combobox(self.form_frame, width=27, textvariable=n, state=state)
 
         # Adding combobox drop down list
         select["values"] = values
