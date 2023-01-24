@@ -654,9 +654,9 @@ class Annotator:
         self.move_file(old_file_path, new_file_path)
 
         # Convert damage ids to damage labels
-        damage_front = [self.damage_types[x] for x in self.front_damage_list.curselection()]
-        damage_rear = [self.damage_types[x] for x in self.rear_damage_list.curselection()]
-        damage_side = [self.damage_types[x] for x in self.side_damage_list.curselection()]
+        damage_front = ",".join([self.damage_types[x] for x in self.front_damage_list.curselection()])
+        damage_rear = ",".join([self.damage_types[x] for x in self.rear_damage_list.curselection()])
+        damage_side = ",".join([self.damage_types[x] for x in self.side_damage_list.curselection()])
 
         # Add entry to the dataframe
         new_entry = pd.DataFrame(
