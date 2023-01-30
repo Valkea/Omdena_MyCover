@@ -725,7 +725,7 @@ annotator = Annotator()
 if __name__ == "__main__":
 
     try:
-        annotator.username = sys.argv[1]
+        annotator.username = str(sys.argv[1]).replace(" ", "@")
         print(f"Starting session for {annotator.username}")
 
         window.mainloop()
