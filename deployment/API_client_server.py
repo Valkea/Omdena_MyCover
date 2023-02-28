@@ -6,76 +6,26 @@ import io
 import pathlib
 
 from flask import Flask, flash, request, redirect, jsonify, url_for
-
-import numpy as np
 from PIL import Image
-
 from ultralytics import YOLO
-
-# import tflite_runtime.interpreter as tflite
-
-# import onnxruntime as rt
-# print("ONX:", rt.get_device())
-
+import cv2
 
 # ########## API ##########
 
-
-# --- Load TF Model ---
-
-base_W = 512
-base_H = 256
-base_resolution = f"{base_W}x{base_H}"
-
-# print("Load Semantic-segmentation Model")
-# model_name = "FPN-efficientnetb7_with_data_augmentation_2_diceLoss_512x256"
-
-# -- with a keras model
-# model = keras.models.load_model(
-#     f"models/{model_name}.keras",
-#     custom_objects={
-#         "iou_score": sm.metrics.iou_score,
-#         "f1-score": sm.metrics.f1_score,
-#         "dice_loss": sm.losses.DiceLoss(),
-#     },
-# )
-
-# -- with a TF-Lite model
-# interpreter = tflite.Interpreter(model_path=f"models/{model_name}.tflite")
-# interpreter.resize_tensor_input(0, [1, base_H, base_W, 3])
-# interpreter.allocate_tensors()
-# input_index = interpreter.get_input_details()[0]["index"]
-# output_index = interpreter.get_output_details()[0]["index"]
-
-# --- with a ONNX model
-
-# providers = ['CPUExecutionProvider']
-# providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
-# m = rt.InferenceSession(str(pathlib.Path('models', f"{model_name}.onnx")), providers=providers)
+# --- Load Model ---
 
 model = YOLO("car_damage_detect.pt")  # load a pretrained model (recommended for training)
 
 # --- API Flask app ---
 
 app = Flask(__name__)
-# app.secret_key = "super secret key"
 
-
-UPLOAD_FOLDER = "/uploads"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def preprocessing(im):
-    try:
-        # im = Image.open(infile)
-        im = im.resize((base_W, base_H), resample=0) 
-        im.save('test', "JPEG")
-        return im
-    except IOError:
-        print(f"cannot preprocess")
 
 @app.route("/")
 def index():
@@ -103,67 +53,48 @@ def upload_file():
             # filename = secure_filename(file.filename)
             image_bytes = Image.open(io.BytesIO(file.read()))
 
-            image_bytes = preprocessing(image_bytes)
+            results = model.predict(image_bytes)  # obtain predictions
 
-            # Preprocess image
-            # img = preprocess_sample(image_bytes, preprocess_input)
-            # /!\ Preprocessed layers are now included in the model
-            img = np.array([np.array(image_bytes)], dtype=np.float32)
+            predictions_classes = []
+            predictions_coords = []
 
-            if (img.shape[1] != base_H or img.shape[2] != base_W):
-                print(img.shape[1], img.shape[2])
-                raise Exception(f"Custom Error: wrong image size ({base_H}x{base_W}) ({img.shape[1]}, {img.shape[2]}) required!")
+            for r in results:
+        
+                # annotator = Annotator(frame)
+        
+                boxes = r.boxes
+                for box in boxes:
+            
+                    coords = box.xyxy[0]  # get box coordinates in (top, left, bottom, right) format
+                    classindex = box.cls
 
-            # Apply model
-            print("--- Predict")
-            # pred = model.predict(img)  # keras model
+                    predictions_classes.append(
+                        model.names[int(classindex)]
+                    )
+                    predictions_coords.append(
+                        coords.tolist()
+                    )
 
-            img = np.array(img, dtype=np.float32)
-            print(img.shape)
+            print("PREDS:", predictions_classes)
+            print("COORDS:", predictions_coords)
 
-            # -- Predict with TF-Lite
-            # interpreter.set_tensor(input_index, img)
-            # interpreter.invoke()
-            # pred = interpreter.get_tensor(output_index)
-
-            # -- Predict with ONNX
-            #### pred = m.run(['model_6'], {'input': img})[0]
-
-            # Convert to categories
-            #### mask = np.argmax(pred, axis=3)[0]
-
-            # Return the matrix
-            #### return jsonify(mask.tolist())
-
-            im = pathlib.Path('data', "val", 'emmanuel_letremble_1996_mercedes-benz_e_320_exterior_5211_postloss.jpg')
-            img = Image.open(im)
-
-
-            # results = model.predict(img)  # obtain predictions
-            results = model(img)  # obtain predictions
-
-            predictions = []
-            for result in results:
-                for i in result.boxes.cls:
-                    predictions.append(
-                        model.names[int(i)]
-                    )  # append the detected classes to empty list
-
-            print("PREDS:", predictions)
+            predictions_merged = '<br>'.join([str(x) for x in zip(predictions_classes, predictions_coords)])
 
             # cv2.imshow("result", results[0].plot())
 
-    return """
+    return f"""
     <!doctype html>
     <html>
         <head>
             <title>Upload new File</title>
         </head>
         <body>
+            <h1>Predicted classes</h1>
+            <p>{predictions_merged}</p>
             <h1>Upload new File</h1>
             <form method=post enctype=multipart/form-data>
                 <input type=file name=file>
-                <input type=submit value=Upload>
+                <input type=submit value=Predict>
             </form>
         </body>
     </html>
@@ -181,7 +112,7 @@ def get_ids(path):
         ids.append(file)
     return ids
 
-@app.route("/list/")
+@app.route("/upload/")
 def file_list():
     files_path = pathlib.Path('data', "val")
     ids = get_ids(files_path)
@@ -193,17 +124,33 @@ def file_list():
     <!doctype html>
     <html>
         <head>
-            <title>List of available ids</title>
+            <title>Upload ONE image</title>
         </head>
         <body>
             <h1>Upload new File</h1>
-            <form action={API_URL}/predict/ method=post enctype=multipart/form-data>
+            <form action={API_URL}predict/ method=post enctype=multipart/form-data>
                 <input type=file name=file>
-                <input type=submit value=Upload>
+                <input type=submit value='Predict'>
             </form>
         </body>
     </html>
     """
+
+@app.route("/display/<pic_id>", methods=["GET", "POST"])
+def display(pic_id):
+
+    return f"""
+    <!doctype html>
+    <html>
+        <head>
+            <title>Upload ONE image</title>
+        </head>
+        <body>
+            <p>{pic_id}</p>
+        </body>
+    </html>
+    """
+
 
 # ########## START BOTH API & FRONTEND ##########
 
