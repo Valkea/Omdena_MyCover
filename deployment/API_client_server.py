@@ -104,18 +104,8 @@ def upload_file():
 # ########## DEMO FRONTEND ##########
 # This could be a different Flask script totally independant from the API!
 
-def get_ids(path):
-    ids = []
-    for x in path.glob("*.jpg"):
-        path = str(x)
-        file = path[path.rfind('/')+1:]
-        ids.append(file)
-    return ids
-
 @app.route("/upload/")
 def file_list():
-    files_path = pathlib.Path('data', "val")
-    ids = get_ids(files_path)
 
     API_URL = request.url_root
     print("API_URL:", API_URL)
@@ -135,22 +125,6 @@ def file_list():
         </body>
     </html>
     """
-
-@app.route("/display/<pic_id>", methods=["GET", "POST"])
-def display(pic_id):
-
-    return f"""
-    <!doctype html>
-    <html>
-        <head>
-            <title>Upload ONE image</title>
-        </head>
-        <body>
-            <p>{pic_id}</p>
-        </body>
-    </html>
-    """
-
 
 # ########## START BOTH API & FRONTEND ##########
 
