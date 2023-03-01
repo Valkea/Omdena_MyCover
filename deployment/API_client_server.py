@@ -6,13 +6,15 @@ import io
 import pathlib
 
 from flask import Flask, flash, request, redirect, jsonify, url_for
-from PIL import Image
 from ultralytics import YOLO
-# import cv2
+import easyocr
+# from PIL import Image
+import cv2
+import numpy as np
 
 # ########## API ##########
 
-# --- Load Model ---
+# --- Load Models ---
 
 model_cdd = YOLO("car_damage_detect.pt")
 model_lpd = YOLO("license_plate_detect_model.pt")
@@ -39,6 +41,7 @@ def index():
     <h2>Or you can query the entry points to get JSON answers</h2>
     """
 
+# ##### PREDICT DAMAGES #####
 
 @app.route("/predict_damages/", methods=["GET", "POST"])
 def predict_damages():
@@ -61,16 +64,21 @@ def predict_damages():
         if file and (allowed_file(file.filename) or file.filename == 'file'):
             print(os.getcwd())
             # filename = secure_filename(file.filename)
-            image_bytes = Image.open(io.BytesIO(file.read()))
 
+            # Open POST file with PIL
+            # image_bytes = Image.open(io.BytesIO(file.read()))
+
+            # Open POST file with CV2
+            nparr = np.fromstring(file.read(), np.uint8)
+            image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            # Predict
             results = model_cdd.predict(image_bytes)  # obtain predictions
 
             predictions_classes = []
             predictions_coords = []
 
             for r in results:
-        
-                # annotator = Annotator(frame)
         
                 boxes = r.boxes
                 for box in boxes:
@@ -103,6 +111,41 @@ def predict_damages():
 
     return f"This API entrypoint needs a POST requests with a 'file' parameter"
 
+
+# ##### PREDICT PLATE NUMBER #####
+
+reader = None
+
+def get_text( image, coords ):
+        """ Obtains the license plate number from the license plate """
+
+        # Initialize easyocr reader if needed        
+        global reader
+        if reader is None:
+            reader = easyocr.Reader(['en'])
+
+        # Extract plate coordinates
+        x1,y1,x2,y2 = int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])
+
+        # Preprocess plate image (crop / gray / ...)
+        nimg = np.array(image)
+        img = cv2.cvtColor(nimg, cv2.COLOR_RGB2BGR)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img_precise = img[y1:y2, x1:x2]
+        gray = cv2.cvtColor(img_precise, cv2.COLOR_RGB2GRAY)
+        # cv2.imwrite("plate.png", gray)
+
+        # Try to read text from image
+        result = reader.readtext(gray)
+
+        # Parse results        
+        text = "NOT READABLE"
+        for res in result:
+            if res[2] > 0.1:
+                text = res[1]
+
+        return text
+
 @app.route("/predict_plate/", methods=["GET", "POST"])
 def predict_plate():
 
@@ -124,38 +167,43 @@ def predict_plate():
         if file and (allowed_file(file.filename) or file.filename == 'file'):
             print(os.getcwd())
             # filename = secure_filename(file.filename)
-            image_bytes = Image.open(io.BytesIO(file.read()))
+            
+            # Open POST file with PIL
+            # image_bytes = Image.open(io.BytesIO(file.read()))
 
+            # Open POST file with CV2
+            nparr = np.fromstring(file.read(), np.uint8)
+            image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            # Predict
             results = model_lpd.predict(image_bytes)  # obtain predictions
 
-            predictions_classes = []
             predictions_coords = []
+            predictions_texts = []
 
             for r in results:
-        
-                # annotator = Annotator(frame)
         
                 boxes = r.boxes
                 for box in boxes:
             
                     coords = box.xyxy[0]  # get box coordinates in (top, left, bottom, right) format
-                    classindex = box.cls
+                    text = get_text(image_bytes, coords)
 
-                    predictions_classes.append(
-                        model_lpd.names[int(classindex)]
-                    )
                     predictions_coords.append(
                         coords.tolist()
                     )
+                    predictions_texts.append(
+                        text
+                    )
 
             json_dict = {
-                'classes':predictions_classes,
+                'texts':predictions_texts,
                 'coords':predictions_coords,
             }
 
             args = request.args
             if args.get('isfrontend'):
-                predictions_merged = '<br>'.join([str(x) for x in zip(json_dict['classes'], json_dict['coords'])])
+                predictions_merged = '<br>'.join([str(x) for x in zip(json_dict['coords'], json_dict['texts'])])
                 return redirect(url_for('upload_plate', predictions_merged = predictions_merged))
 
             else:
