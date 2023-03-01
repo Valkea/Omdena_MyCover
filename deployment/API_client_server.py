@@ -5,27 +5,28 @@ import os
 import io
 import pathlib
 
-from flask import Flask, flash, request, redirect, jsonify, url_for
+from flask import Flask, flash, request, redirect, jsonify # , url_for
 from PIL import Image
 from ultralytics import YOLO
-import cv2
+# import cv2
 
 # ########## API ##########
 
 # --- Load Model ---
 
-model = YOLO("car_damage_detect.pt")  # load a pretrained model (recommended for training)
+model = YOLO("car_damage_detect.pt")
 
 # --- API Flask app ---
 
 app = Flask(__name__)
+app.secret_key = "super secret key"
+
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-
-
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# ########## API ENTRY POINTS (BACKEND) ##########
 
 @app.route("/")
 def index():
@@ -36,9 +37,11 @@ def index():
 def upload_file():
 
     if request.method == "POST":
+
         # check if the post request has the file part
         if "file" not in request.files:
             flash("No file part")
+            print("No file part")
             return redirect(request.url)
         file = request.files["file"]
 
@@ -77,10 +80,40 @@ def upload_file():
 
             print("PREDS:", predictions_classes)
             print("COORDS:", predictions_coords)
+            json_dict = {
+                'classes':predictions_classes,
+                'coords':predictions_coords,
+                'prices':['PRICE-TODO']*len(predictions_classes),
+                'actions': ['REPAIR-REPLACE-TODO']*len(predictions_classes)
+            }
 
-            predictions_merged = '<br>'.join([str(x) for x in zip(predictions_classes, predictions_coords)])
+            args = request.args
+            if args.get('isfrontend'):
+    
+                API_URL = request.url_root
+                predictions_merged = '<br>'.join([str(x) for x in zip(json_dict['classes'], json_dict['coords'], json_dict["prices"], json_dict["actions"])])
+                # predictions_merged = '<br>'.join([f" {key} : {value}" for key, value in json_dict.items()])
+                return print_upload_form(API_URL, predictions_merged)
 
-            # cv2.imshow("result", results[0].plot())
+            else:
+                return jsonify(json_dict)
+
+    return f"This API entrypoint needs a POST requests with a 'file' parameter"
+
+
+
+# ########## DEMO FRONTEND ##########
+# This could be a different Flask script totally independant from the API!
+
+def print_upload_form(API_URL, predictions_merged=None):
+    """ Define the HTML form used to send images / videos 
+        to the API 'predict' endpoint
+    """
+
+    if predictions_merged is not None:
+        predictions_merged_display = f"<h1>Predicted classes</h1><p>{predictions_merged}</p>"
+    else:
+        predictions_merged_display = ''
 
     return f"""
     <!doctype html>
@@ -89,10 +122,9 @@ def upload_file():
             <title>Upload new File</title>
         </head>
         <body>
-            <h1>Predicted classes</h1>
-            <p>{predictions_merged}</p>
+            {predictions_merged_display}
             <h1>Upload new File</h1>
-            <form method=post enctype=multipart/form-data>
+            <form action={API_URL}predict/?isfrontend=True method=post enctype=multipart/form-data>
                 <input type=file name=file>
                 <input type=submit value=Predict>
             </form>
@@ -100,31 +132,13 @@ def upload_file():
     </html>
     """
 
-
-# ########## DEMO FRONTEND ##########
-# This could be a different Flask script totally independant from the API!
-
 @app.route("/upload/")
-def file_list():
+def upload():
 
     API_URL = request.url_root
     print("API_URL:", API_URL)
 
-    return f"""
-    <!doctype html>
-    <html>
-        <head>
-            <title>Upload ONE image</title>
-        </head>
-        <body>
-            <h1>Upload new File</h1>
-            <form action={API_URL}predict/ method=post enctype=multipart/form-data>
-                <input type=file name=file>
-                <input type=submit value='Predict'>
-            </form>
-        </body>
-    </html>
-    """
+    return print_upload_form(API_URL)
 
 # ########## START BOTH API & FRONTEND ##########
 
