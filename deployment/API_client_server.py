@@ -141,7 +141,7 @@ def get_text( image, coords ):
         # Parse results        
         text = "NOT READABLE"
         for res in result:
-            if res[2] > 0.1:
+            if len(res[1]) in [8,9] and res[2] > 0.1:
                 text = res[1]
 
         return text
