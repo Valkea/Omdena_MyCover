@@ -2,10 +2,10 @@
 
 You will find in the section below, all the instructions required to run the API on your own computer.
  
-1 - in the first section, I will describe how to run it from the source (so you can modify the API)
+1 - in the first section, I will describe how to run it from the source (so you can modify the API)<br>
 2 - in the second section, I will explain how to use the API from the docker I prepared and deployed on the Docker Hub.
 
-## Run the API locally from sources
+## 1. Run the API locally from sources
 
 ### First, 
 let's duplicate the project github repository
@@ -45,7 +45,7 @@ let's create a virtual environment and install the required Python libraries
 >>> py -m pip install -r requirements.txt
 ```
 
-## Running API server locally using python scripts
+### Running API server locally using python scripts
 
 Start both API and CLIENT Flask servers:
 ```bash
@@ -54,8 +54,7 @@ Start both API and CLIENT Flask servers:
 Stop with CTRL+C *(once the tests are done, from another terminal...)*
 
 
-
-#### Tests
+### Tests
 
 > One can check that the server is running by opening the following url:<br>
 > http://0.0.0.0:5000/
@@ -67,17 +66,21 @@ Stop with CTRL+C *(once the tests are done, from another terminal...)*
 > * http://0.0.0.0:5000/predict_plate <br>
 > and it will return a json encoded array of the predicted plate text.<br>
 >
-> *In postman create a POST query with one of the two previous URL, then add a field named 'file' of type File in Body/form-data).*
+> Postman instruction:
+> 1. create a POST query with one of the two previous URL,
+> 2. add a field named 'file' of type File in Body/form-data),
+> 3. select an image to send with the request,
+> 4. send the request and get the result.
 
 > You can also use the simple front-end available here:<br>
 > * http://0.0.0.0:5000/upload_damages/ <br>
 > * http://0.0.0.0:5000/upload_plate/ <br>
-> When posting an image, it will be send to the /predict_damages or /predict_plate urls and the result will be displayed in HTML.
+> When posting an image from this simple frontend, the data will be send to the /predict_damages or /predict_plate urls and the result will be displayed in HTML.
 
 Note that the first request (particularly the plate request) might take some time. But once you've got the first prediction, it should run pretty fast for the others.
 
 
-## Docker
+## 2. Docker
 
 ### Building a Docker image
 
