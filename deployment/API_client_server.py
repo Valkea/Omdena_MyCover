@@ -17,7 +17,7 @@ import numpy as np
 
 # --- Load Models ---
 
-model_cdd = YOLO(Path("models", "car_damage_detect.pt"))
+model_cdd = YOLO(Path("models", "car_damage_detect_2.pt"))
 model_lpd = YOLO(Path("models", "license_plate_detect_model.pt"))
 
 # --- API Flask app ---
