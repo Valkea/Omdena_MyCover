@@ -122,7 +122,7 @@ def predict_damages():
                     ]
                 )
                 return redirect(
-                    url_for("upload_damages", predictions_merged=f"model:{cdd_model_name}" + predictions_merged)
+                    url_for("upload_damages", predictions_merged=f"model:{cdd_model_name}<br>" + predictions_merged)
                 )
 
             else:
@@ -227,7 +227,7 @@ def predict_plate():
                     [str(x) for x in zip(json_dict["coords"], json_dict["texts"])]
                 )
                 return redirect(
-                    url_for("upload_plate", predictions_merged=f"model:{lpd_model_name}" + predictions_merged)
+                    url_for("upload_plate", predictions_merged=f"model:{lpd_model_name}<br>" + predictions_merged)
                 )
 
             else:
