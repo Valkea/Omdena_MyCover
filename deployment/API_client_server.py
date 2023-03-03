@@ -17,8 +17,11 @@ import numpy as np
 
 # --- Load Models ---
 
-model_cdd = YOLO(Path("models", "car_damage_detect_2.pt"))
-model_lpd = YOLO(Path("models", "license_plate_detect_model.pt"))
+cdd_model_name = "car_damage_detect_2.pt"
+lpd_model_name = "license_plate_detect_model.pt"
+
+model_cdd = YOLO(Path("models", cdd_model_name))
+model_lpd = YOLO(Path("models", lpd_model_name))
 
 # --- API Flask app ---
 
@@ -97,6 +100,7 @@ def predict_damages():
                     predictions_coords.append(coords.tolist())
 
             json_dict = {
+                "model": cdd_model_name,
                 "classes": predictions_classes,
                 "coords": predictions_coords,
                 "prices": ["PRICE-TODO"] * len(predictions_classes),
@@ -118,7 +122,7 @@ def predict_damages():
                     ]
                 )
                 return redirect(
-                    url_for("upload_damages", predictions_merged=predictions_merged)
+                    url_for("upload_damages", predictions_merged=f"model:{cdd_model_name}" + predictions_merged)
                 )
 
             else:
@@ -212,6 +216,7 @@ def predict_plate():
                     predictions_texts.append(text)
 
             json_dict = {
+                "model": lpd_model_name,
                 "texts": predictions_texts,
                 "coords": predictions_coords,
             }
@@ -222,7 +227,7 @@ def predict_plate():
                     [str(x) for x in zip(json_dict["coords"], json_dict["texts"])]
                 )
                 return redirect(
-                    url_for("upload_plate", predictions_merged=predictions_merged)
+                    url_for("upload_plate", predictions_merged=f"model:{lpd_model_name}" + predictions_merged)
                 )
 
             else:
