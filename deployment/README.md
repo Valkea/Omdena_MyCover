@@ -1,8 +1,9 @@
 # API for the MyCover Omdena's project
 
 You will find in the section below, all the instructions required to run the API on your own computer.
-  1 - in the first section, I will describe how to run it from the source (so you can modify the API)
-  2 - in the second section, I will explain how to use the API from the docker I prepared and deployed on the Docker Hub.
+ 
+1 - in the first section, I will describe how to run it from the source (so you can modify the API)
+2 - in the second section, I will explain how to use the API from the docker I prepared and deployed on the Docker Hub.
 
 ## Run the API locally from sources
 
@@ -59,16 +60,18 @@ Stop with CTRL+C *(once the tests are done, from another terminal...)*
 > One can check that the server is running by opening the following url:<br>
 > http://0.0.0.0:5000/
 
-> Then you can `post` an image to: (if opened in the browser it will display a upload form for ease of testing)<br>
-> . http://0.0.0.0:5000//predict_damages <br>
+> Then you can `post` an image to: <br>
+> * http://0.0.0.0:5000/predict_damages <br>
 > and it will return a json encoded array of the predicted damages.<br>
 > 
-> . http://0.0.0.0:5000//predict_plate <br>
+> * http://0.0.0.0:5000/predict_plate <br>
 > and it will return a json encoded array of the predicted plate text.<br>
+>
+> *In postman create a POST query with one of the two previous URL, then add a field named 'file' of type File in Body/form-data).*
 
 > You can also use the simple front-end available here:<br>
-> . http://0.0.0.0:5000/upload_damages/ <br>
-> . http://0.0.0.0:5000/upload_plate/ <br>
+> * http://0.0.0.0:5000/upload_damages/ <br>
+> * http://0.0.0.0:5000/upload_plate/ <br>
 > When posting an image, it will be send to the /predict_damages or /predict_plate urls and the result will be displayed in HTML.
 
 Note that the first request (particularly the plate request) might take some time. But once you've got the first prediction, it should run pretty fast for the others.
