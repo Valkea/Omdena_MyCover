@@ -16,8 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # --- Copy project files
 COPY ["API_client_server.py", "./"]
-COPY ["models/car_damage_detect.pt", "./models/"]
-COPY ["models/license_plate_detect_model.pt", "./models/"]
+COPY ["models/*", "./models/"]
 
 # --- Start server
 # ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:$PORT", "API_client_server:app"]
