@@ -6,25 +6,23 @@ You will find in the section below, all the instructions required to run the API
 2 - in the second section, I will explain how to use the API from the docker I prepared and deployed on the Docker Hub.
 
 ## 1. Run the API locally from sources
+(You will need Omdena's credential for this part, but if you don't have these credentials, you can try out the Docker version at the bottom)
 
 ### First, 
 let's duplicate the project github repository
 
 ```bash
->>> git https://github.com/Valkea/Omdena_MyCover
->>> cd Omdena_MyCover/deployment
+>>> git clone https://dagshub.com/Omdena/MyCover.git
+>>> cd MyCover/task_5_model_deployment/API_Emmanuel_Letremble/
 ```
 
 ### Secondly,
 let's clone the large file with DVC *(you need to install [DVC](https://dvc.org) prior to using the following command line)*:
 ```bash
 >>> dvc remote add origin https://dagshub.com/Omdena/MyCover.dvc
->>> dvc pull -r origin task_5_model_deployment/API_Emmanuel_Letremble
-```
-
-The second command will collect the models used in the API only, but if you want to get all the prepared models, you can get them with the following command:
-
-```bash
+>>> dvc remote modify origin --local auth basic 
+>>> dvc remote modify origin --local user YOUR_LOGIN
+>>> dvc remote modify origin --local password YOUR_PASSWORD
 >>> dvc pull -r origin
 ```
 
@@ -66,7 +64,7 @@ Stop with CTRL+C *(once the tests are done, from another terminal...)*
 > * http://0.0.0.0:5000/predict_plate <br>
 > and it will return a json encoded array of the predicted plate text.<br>
 >
-> Postman instruction:
+> Postman instructions:
 > 1. create a POST query with one of the two previous URL,
 > 2. add a field named 'file' of type File in Body/form-data),
 > 3. select an image to send with the request,
