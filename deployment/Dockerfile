@@ -11,8 +11,8 @@ WORKDIR /app
 
 # --- Install Python requirements.
 # RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-docker.txt ./
+RUN pip install --no-cache-dir -r requirements-docker.txt
 
 # --- Copy project files
 COPY ["API_client_server.py", "./"]
