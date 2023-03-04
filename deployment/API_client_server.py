@@ -13,6 +13,9 @@ import easyocr
 import cv2
 import numpy as np
 
+import onnxruntime as rt
+print("ONX:", rt.get_device())
+
 # ########## API ##########
 
 # --- Load Models ---
@@ -22,6 +25,7 @@ lpd_model_name = "license_plate_detect_model.pt"
 
 model_cdd = YOLO(Path("models", cdd_model_name))
 model_lpd = YOLO(Path("models", lpd_model_name))
+models_severity = {}
 
 # --- API Flask app ---
 
@@ -49,6 +53,53 @@ def index():
 
 
 # ##### PREDICT DAMAGES #####
+
+default_thresholds = {
+    "hood_damage":0.5,
+    "front_bumper_damage":0.5,
+    "front_fender_damage":0.5,
+    "headlight_damage":0.5,
+    "front_windscreen_damage":0.1,
+    "sidemirror_damage":0.1,
+    "sidedoor_panel_damage":0.5,
+    "roof_damage":0.5,
+    "runnigboard_damage":0.5,
+    "pillar_damage":0.5,
+    "sidedoor_window_damage":0.5,
+    "rear_fender_damage":0.5,
+    "rear_windscreen_damage":0.5,
+    "taillight_damage":0.5,
+    "rear_bumper_damage":0.5,
+    "backdoor_panel_damage":0.5,
+}
+
+def get_action(severity, threshold):
+    if severity > threshold:
+        return "REPLACE"
+    else:
+        return "REPAIR"
+
+def get_severity(image, coords, class_name):
+
+    input_size = (224, 224)
+
+    if class_name not in models_severity.keys():
+        # providers = ['CPUExecutionProvider']
+        providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
+        models_severity[class_name] = rt.InferenceSession(str(Path('models', f"severity_{class_name}.onnx")), providers=providers)
+        print(f"LOAD severity_{class_name}.onnx")
+
+    # Extract plate coordinates
+    x1, y1, x2, y2 = int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])
+
+    # Preprocess plate image (crop / gray / ...)
+    nimg = np.array(image, dtype=np.float32)
+    img_precise = nimg[y1:y2, x1:x2]
+    img = cv2.resize(img_precise, dsize=(input_size), interpolation=cv2.INTER_CUBIC)
+    # cv2.imwrite("severity.png", img)
+
+    # -- Predict with ONNX
+    return models_severity[class_name].run(['output_layer'], {'sequential_39_input': [img]})[0][0][0]
 
 
 @app.route("/predict_damages/", methods=["GET", "POST"])
@@ -85,6 +136,8 @@ def predict_damages():
 
             predictions_classes = []
             predictions_coords = []
+            predictions_severity = []
+            predictions_actions = []
 
             for r in results:
 
@@ -95,16 +148,24 @@ def predict_damages():
                         0
                     ]  # get box coordinates in (top, left, bottom, right) format
                     classindex = box.cls
+                    class_name = model_cdd.names[int(classindex)]
 
-                    predictions_classes.append(model_cdd.names[int(classindex)])
+                    severity = get_severity(image_bytes, coords, class_name)
+                    threshold = default_thresholds[class_name]
+                    print("DEFAULT threshold:", class_name, threshold)
+
+                    predictions_classes.append(class_name)
                     predictions_coords.append(coords.tolist())
+                    predictions_severity.append(str(severity))
+                    predictions_actions.append(get_action(severity, threshold))
 
             json_dict = {
                 "model": cdd_model_name,
                 "classes": predictions_classes,
                 "coords": predictions_coords,
-                "prices": ["PRICE-TODO"] * len(predictions_classes),
-                "actions": ["REPAIR-REPLACE-TODO"] * len(predictions_classes),
+                "severity": predictions_severity,
+                "actions": predictions_actions,
+                # "prices": ["PRICE-TODO"] * len(predictions_classes),
             }
 
             args = request.args
@@ -116,8 +177,9 @@ def predict_damages():
                         for x in zip(
                             json_dict["classes"],
                             json_dict["coords"],
-                            json_dict["prices"],
+                            json_dict["severity"],
                             json_dict["actions"],
+                            # json_dict["prices"],
                         )
                     ]
                 )
