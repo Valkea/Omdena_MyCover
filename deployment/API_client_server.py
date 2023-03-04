@@ -25,7 +25,7 @@ lpd_model_name = "license_plate_detect_model.pt"
 
 model_cdd = YOLO(Path("models", cdd_model_name))
 model_lpd = YOLO(Path("models", lpd_model_name))
-models_severity = {}
+models_severity = {} # severity models are loaded on demand
 
 # --- API Flask app ---
 
@@ -43,6 +43,8 @@ def allowed_file(filename):
 
 @app.route("/")
 def index():
+    """ Define the content of the main fontend page of the API server """
+
     return """
     <h1>The 'MyCover Inference API' server is up.</h1>
     <h2>You can use the frontend</h2>
@@ -65,21 +67,57 @@ default_thresholds = {
     "roof_damage":0.5,
     "runnigboard_damage":0.5,
     "pillar_damage":0.5,
-    "sidedoor_window_damage":0.5,
+    "sidedoor_window_damage":0.1,
     "rear_fender_damage":0.5,
-    "rear_windscreen_damage":0.5,
+    "rear_windscreen_damage":0.1,
     "taillight_damage":0.5,
     "rear_bumper_damage":0.5,
     "backdoor_panel_damage":0.5,
 }
 
-def get_action(severity, threshold):
+def get_action(severity: float, class_name: str) -> str :
+    """
+    Returns the proper action according to the severity and the given threshold.
+
+    Parameters
+    ----------
+    severity: float
+        the severity value returned by the severity model
+    class_name: str
+        the name of the class detected by the car_damage_detect model
+
+    Returns
+    -------
+    str:
+        The suggested action
+    """
+
+    threshold = default_thresholds[class_name]
+    print("Threshold:", class_name, threshold)
+
     if severity > threshold:
         return "REPLACE"
     else:
         return "REPAIR"
 
-def get_severity(image, coords, class_name):
+def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
+    """
+    Returns the estimated severity for a given damage detected by the car_damage_detect model.
+
+    Parameters
+    ----------
+    image: np.array
+        the array of the original image
+    coords: np.array / torch.Tensor
+        the coordinates of the damage detected on the original image by the car_damage_detect model
+    class_name: str
+        the name of the class detected by the car_damage_detect model
+
+    Returns
+    -------
+    float:
+        The estimated severity
+    """
 
     input_size = (224, 224)
 
@@ -104,6 +142,10 @@ def get_severity(image, coords, class_name):
 
 @app.route("/predict_damages/", methods=["GET", "POST"])
 def predict_damages():
+    """
+    Define the API endpoint to get damages predictions from an image.
+    This entrypoint awaits a POST request along with a 'file' parameter containing an image.
+    """
 
     if request.method == "POST":
 
@@ -149,15 +191,12 @@ def predict_damages():
                     ]  # get box coordinates in (top, left, bottom, right) format
                     classindex = box.cls
                     class_name = model_cdd.names[int(classindex)]
-
                     severity = get_severity(image_bytes, coords, class_name)
-                    threshold = default_thresholds[class_name]
-                    print("DEFAULT threshold:", class_name, threshold)
 
                     predictions_classes.append(class_name)
                     predictions_coords.append(coords.tolist())
                     predictions_severity.append(str(severity))
-                    predictions_actions.append(get_action(severity, threshold))
+                    predictions_actions.append(get_action(severity, class_name))
 
             json_dict = {
                 "model": cdd_model_name,
@@ -195,16 +234,24 @@ def predict_damages():
 
 # ##### PREDICT PLATE NUMBER #####
 
-reader = None
+reader = easyocr.Reader(["en"])
 
+def get_text(image: np.array, coords: np.array) -> str:
+    """
+    Try to obtain the license plate number from the license plate image.
 
-def get_text(image, coords):
-    """ Obtains the license plate number from the license plate """
+    Parameters
+    ----------
+    image: np.array
+        the array of the original image
+    coords: np.array / torch.Tensor
+        the coordinates of the damage detected on the original image by the license_plate_detect model
 
-    # Initialize easyocr reader if needed
-    global reader
-    if reader is None:
-        reader = easyocr.Reader(["en"])
+    Returns
+    -------
+    str:
+        The estimated plate number
+    """
 
     # Extract plate coordinates
     x1, y1, x2, y2 = int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])
@@ -231,6 +278,10 @@ def get_text(image, coords):
 
 @app.route("/predict_plate/", methods=["GET", "POST"])
 def predict_plate():
+    """
+    Define the API endpoint to get plate text (if any) from an image.
+    This entrypoint awaits a POST request along with a 'file' parameter containing an image.
+    """
 
     if request.method == "POST":
 
@@ -302,10 +353,25 @@ def predict_plate():
 # This could be a different Flask script totally independant from the API!
 
 
-def print_upload_form(API_URL, target, predictions_merged=None):
-    """Define the HTML form used to send images / videos
-    to the API 'predict' endpoint
+def print_upload_form(API_URL: str, target: str, predictions_merged:str=None) -> str:
     """
+    This function defines the content of the frontend pages with upload option.
+    
+    Parameters
+    ----------
+    API_URL: str
+        the base url of the API
+    target: str
+        the endpoint name & parameters
+    predictions_merged: str
+        the predictions returned by the models
+
+    Returns
+    -------
+    str:
+        The HTML  content of the frontend page
+    """
+
 
     if predictions_merged is not None:
         predictions_merged_display = (
@@ -334,10 +400,9 @@ def print_upload_form(API_URL, target, predictions_merged=None):
 
 @app.route("/upload_damages/")
 def upload_damages():
+    """ A simple frontend page to upload image & try the predic_damages API endpoint. """
 
     API_URL = request.url_root
-    print("API_URL:", API_URL)
-
     args = request.args
 
     return print_upload_form(API_URL, "predict_damages", args.get("predictions_merged"))
@@ -345,10 +410,9 @@ def upload_damages():
 
 @app.route("/upload_plate/")
 def upload_plate():
+    """ A simple frontend page to upload image & try the predic_plate API endpoint. """
 
     API_URL = request.url_root
-    print("API_URL:", API_URL)
-
     args = request.args
 
     return print_upload_form(API_URL, "predict_plate", args.get("predictions_merged"))
