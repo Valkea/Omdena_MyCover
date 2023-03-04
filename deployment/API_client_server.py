@@ -5,13 +5,14 @@ import os
 import io
 from pathlib import Path
 
-from flask import Flask, flash, request, redirect, jsonify, url_for
+from flask import Flask, flash, request, redirect, jsonify, url_for, session
 from ultralytics import YOLO
 import easyocr
 
 # from PIL import Image
 import cv2
 import numpy as np
+from json2html import json2html
 
 import onnxruntime as rt
 print("ONX:", rt.get_device())
@@ -175,11 +176,7 @@ def predict_damages():
 
             # Predict
             results = model_cdd.predict(image_bytes)  # obtain predictions
-
-            predictions_classes = []
-            predictions_coords = []
-            predictions_severity = []
-            predictions_actions = []
+            predictions = []
 
             for r in results:
 
@@ -193,41 +190,26 @@ def predict_damages():
                     class_name = model_cdd.names[int(classindex)]
                     severity = get_severity(image_bytes, coords, class_name)
 
-                    predictions_classes.append(class_name)
-                    predictions_coords.append(coords.tolist())
-                    predictions_severity.append(str(severity))
-                    predictions_actions.append(get_action(severity, class_name))
+                    pred_dict = {
+                        "severity_model": f"severity_{class_name}.onnx",
+                        "class": class_name,
+                        "coords": coords.tolist(),
+                        "severity": str(severity),
+                        "action": get_action(severity, class_name),
+                    }
+                    predictions.append(pred_dict)
 
-            json_dict = {
-                "model": cdd_model_name,
-                "classes": predictions_classes,
-                "coords": predictions_coords,
-                "severity": predictions_severity,
-                "actions": predictions_actions,
-                # "prices": ["PRICE-TODO"] * len(predictions_classes),
-            }
+            json_dict = {'damage_model': cdd_model_name, 'damages': predictions}
 
             args = request.args
-            if args.get("isfrontend"):
-
-                predictions_merged = "<br>".join(
-                    [
-                        str(x)
-                        for x in zip(
-                            json_dict["classes"],
-                            json_dict["coords"],
-                            json_dict["severity"],
-                            json_dict["actions"],
-                            # json_dict["prices"],
-                        )
-                    ]
-                )
-                return redirect(
-                    url_for("upload_damages", predictions_merged=f"model:{cdd_model_name}<br>" + predictions_merged)
-                )
+            if args.get("isfrontend") is None:
+                return jsonify(json_dict)
 
             else:
-                return jsonify(json_dict)
+                session['json2html'] = json2html.convert(json_dict)
+                return redirect(
+                    url_for("upload_damages")
+                )
 
     return "This API entrypoint needs a POST requests with a 'file' parameter"
 
@@ -312,8 +294,7 @@ def predict_plate():
             # Predict
             results = model_lpd.predict(image_bytes)  # obtain predictions
 
-            predictions_coords = []
-            predictions_texts = []
+            predictions = []
 
             for r in results:
 
@@ -325,26 +306,23 @@ def predict_plate():
                     ]  # get box coordinates in (top, left, bottom, right) format
                     text = get_text(image_bytes, coords)
 
-                    predictions_coords.append(coords.tolist())
-                    predictions_texts.append(text)
+                    pred_dict = {
+                        "text": text,
+                        "coords": coords.tolist(),
+                    }
+                    predictions.append(pred_dict)
 
-            json_dict = {
-                "model": lpd_model_name,
-                "texts": predictions_texts,
-                "coords": predictions_coords,
-            }
+            json_dict = {'plate_model': lpd_model_name, 'plates': predictions }
 
             args = request.args
-            if args.get("isfrontend"):
-                predictions_merged = "<br>".join(
-                    [str(x) for x in zip(json_dict["coords"], json_dict["texts"])]
-                )
-                return redirect(
-                    url_for("upload_plate", predictions_merged=f"model:{lpd_model_name}<br>" + predictions_merged)
-                )
+            if args.get("isfrontend") is None:
+                return jsonify(json_dict)
 
             else:
-                return jsonify(json_dict)
+                session['json2html'] = json2html.convert(json_dict)
+                return redirect(
+                    url_for("upload_plate")
+                )
 
     return "This API entrypoint needs a POST requests with a 'file' parameter"
 
@@ -375,7 +353,7 @@ def print_upload_form(API_URL: str, target: str, predictions_merged:str=None) ->
 
     if predictions_merged is not None:
         predictions_merged_display = (
-            f"<h1>Predicted classes</h1><p>{predictions_merged}</p>"
+            f"<h1>Returned content</h1><p>(The JSON is converted to HTML)</p><p>{predictions_merged}</p>"
         )
     else:
         predictions_merged_display = ""
@@ -387,6 +365,7 @@ def print_upload_form(API_URL: str, target: str, predictions_merged:str=None) ->
             <title>Upload new File</title>
         </head>
         <body>
+            <a href='{API_URL}' target='_self'><< back</a><br>
             {predictions_merged_display}
             <h1>Upload new File</h1>
             <form action={API_URL}{target}/?isfrontend=True method=post enctype=multipart/form-data>
@@ -404,8 +383,12 @@ def upload_damages():
 
     API_URL = request.url_root
     args = request.args
+    predictions_merged = None
+    if 'json2html' in session:
+        predictions_merged = session['json2html']
+    session['json2html'] = None
 
-    return print_upload_form(API_URL, "predict_damages", args.get("predictions_merged"))
+    return print_upload_form(API_URL, "predict_damages", predictions_merged)
 
 
 @app.route("/upload_plate/")
@@ -414,8 +397,12 @@ def upload_plate():
 
     API_URL = request.url_root
     args = request.args
+    predictions_merged = None
+    if 'json2html' in session:
+        predictions_merged = session['json2html']
+    session['json2html'] = None
 
-    return print_upload_form(API_URL, "predict_plate", args.get("predictions_merged"))
+    return print_upload_form(API_URL, "predict_plate", predictions_merged)
 
 
 # ########## START BOTH API & FRONTEND ##########
