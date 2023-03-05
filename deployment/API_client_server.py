@@ -6,6 +6,10 @@ import io
 from pathlib import Path
 
 from flask import Flask, flash, request, redirect, jsonify, url_for, session
+from apiflask import APIFlask, Schema, abort
+from apiflask.fields import Integer, String, File, List, Nested, Float
+from apiflask.validators import Length, OneOf
+
 from ultralytics import YOLO
 import easyocr
 
@@ -16,6 +20,51 @@ from json2html import json2html
 
 import onnxruntime as rt
 print("ONX:", rt.get_device())
+
+# --- Define input and outputs for APIFlask documentation ---
+
+#pets = [
+#    {'id': 0, 'name': 'Kitty', 'category': 'cat'},
+#    {'id': 1, 'name': 'Coco', 'category': 'dog'}
+#]
+
+class Image(Schema):
+    file = File()
+
+damage_sample = [
+    {
+        "action": "REPLACE",
+        "type": "headlight_damage",
+        "coords": [420.0, 206.0, 552.0, 294.0],
+        "severity": "0.5441662",
+        "severity_model": "severity_headlight_damage.onnx"
+    },]
+
+plate_sample = [
+    {
+        "coords": [294.0, 215.0, 440.0, 262.0],
+        "text": "NOT READABLE"
+    }]
+
+class DamagesOut(Schema):
+    type = String()
+    coords = List(Integer(), many=True, validate=Length(4, 4))
+    severity = String()
+    severity_model = String()
+    action = String()
+
+class DamagesFullOut(Schema):
+    damage_model = String(load_default="car_damage_detect.pt")
+    damages = List(Nested(DamagesOut), load_default=damage_sample)
+
+class PlatesOut(Schema):
+    coords = List(Integer(), many=True, validate=Length(4, 4))
+    text = String()
+
+class PlatesFullOut(Schema):
+    plate_model = String(load_default="car_damage_detect.pt")
+    plates = List(Nested(PlatesOut), load_default=plate_sample)
+
 
 # ########## API ##########
 
@@ -29,8 +78,8 @@ model_lpd = YOLO(Path("models", lpd_model_name))
 models_severity = {} # severity models are loaded on demand
 
 # --- API Flask app ---
-
-app = Flask(__name__)
+# app = Flask(__name__)
+app = APIFlask(__name__)
 app.secret_key = "super secret key"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
@@ -43,6 +92,7 @@ def allowed_file(filename):
 
 
 @app.route("/")
+# @app.doc(hide=True)
 def index():
     """ Define the content of the main fontend page of the API server """
 
@@ -141,77 +191,75 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     return models_severity[class_name].run(['output_layer'], {'sequential_39_input': [img]})[0][0][0]
 
 
-@app.route("/predict_damages/", methods=["GET", "POST"])
-def predict_damages():
+@app.route("/predict_damages/", methods=["POST"])
+@app.input(Image, location='files')
+@app.output(DamagesFullOut)
+def predict_damages(data):
     """
     Define the API endpoint to get damages predictions from an image.
     This entrypoint awaits a POST request along with a 'file' parameter containing an image.
     """
+    
+    # check if the post request has the file part
+    if "file" not in request.files:
+        flash("No file part")
+        print("No file part")
+        return redirect(request.url)
+    file = request.files["file"]
 
-    if request.method == "POST":
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == "":
+        flash("No selected file")
+        return redirect(request.url)
 
-        # check if the post request has the file part
-        if "file" not in request.files:
-            flash("No file part")
-            print("No file part")
-            return redirect(request.url)
-        file = request.files["file"]
+    if file and (allowed_file(file.filename) or file.filename == "file"):
+        print(os.getcwd())
+        # filename = secure_filename(file.filename)
 
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == "":
-            flash("No selected file")
-            return redirect(request.url)
+        # Open POST file with PIL
+        # image_bytes = Image.open(io.BytesIO(file.read()))
 
-        if file and (allowed_file(file.filename) or file.filename == "file"):
-            print(os.getcwd())
-            # filename = secure_filename(file.filename)
+        # Open POST file with CV2
+        nparr = np.fromstring(file.read(), np.uint8)
+        image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            # Open POST file with PIL
-            # image_bytes = Image.open(io.BytesIO(file.read()))
+        # Predict
+        results = model_cdd.predict(image_bytes)  # obtain predictions
+        predictions = []
 
-            # Open POST file with CV2
-            nparr = np.fromstring(file.read(), np.uint8)
-            image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        for r in results:
 
-            # Predict
-            results = model_cdd.predict(image_bytes)  # obtain predictions
-            predictions = []
+            boxes = r.boxes
+            for box in boxes:
 
-            for r in results:
+                coords = box.xyxy[
+                    0
+                ]  # get box coordinates in (top, left, bottom, right) format
+                classindex = box.cls
+                class_name = model_cdd.names[int(classindex)]
+                severity = get_severity(image_bytes, coords, class_name)
 
-                boxes = r.boxes
-                for box in boxes:
+                pred_dict = {
+                    "severity_model": f"severity_{class_name}.onnx",
+                    "type": class_name,
+                    "coords": coords.tolist(),
+                    "severity": str(severity),
+                    "action": get_action(severity, class_name),
+                }
+                predictions.append(pred_dict)
 
-                    coords = box.xyxy[
-                        0
-                    ]  # get box coordinates in (top, left, bottom, right) format
-                    classindex = box.cls
-                    class_name = model_cdd.names[int(classindex)]
-                    severity = get_severity(image_bytes, coords, class_name)
+        json_dict = {'damage_model': cdd_model_name, 'damages': predictions}
 
-                    pred_dict = {
-                        "severity_model": f"severity_{class_name}.onnx",
-                        "class": class_name,
-                        "coords": coords.tolist(),
-                        "severity": str(severity),
-                        "action": get_action(severity, class_name),
-                    }
-                    predictions.append(pred_dict)
+        args = request.args
+        if args.get("isfrontend") is None:
+            return jsonify(json_dict)
 
-            json_dict = {'damage_model': cdd_model_name, 'damages': predictions}
-
-            args = request.args
-            if args.get("isfrontend") is None:
-                return jsonify(json_dict)
-
-            else:
-                session['json2html'] = json2html.convert(json_dict)
-                return redirect(
-                    url_for("upload_damages")
-                )
-
-    return "This API entrypoint needs a POST requests with a 'file' parameter"
+        else:
+            session['json2html'] = json2html.convert(json_dict)
+            return redirect(
+                url_for("upload_damages")
+            )
 
 
 # ##### PREDICT PLATE NUMBER #####
@@ -258,73 +306,71 @@ def get_text(image: np.array, coords: np.array) -> str:
     return text
 
 
-@app.route("/predict_plate/", methods=["GET", "POST"])
-def predict_plate():
+@app.route("/predict_plate/", methods=["POST"])
+@app.input(Image, location='files')
+@app.output(PlatesFullOut)
+def predict_plate(data):
     """
     Define the API endpoint to get plate text (if any) from an image.
     This entrypoint awaits a POST request along with a 'file' parameter containing an image.
     """
 
-    if request.method == "POST":
+    # check if the post request has the file part
+    if "file" not in request.files:
+        flash("No file part")
+        print("No file part")
+        return redirect(request.url)
+    file = request.files["file"]
 
-        # check if the post request has the file part
-        if "file" not in request.files:
-            flash("No file part")
-            print("No file part")
-            return redirect(request.url)
-        file = request.files["file"]
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == "":
+        flash("No selected file")
+        return redirect(request.url)
 
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == "":
-            flash("No selected file")
-            return redirect(request.url)
+    if file and (allowed_file(file.filename) or file.filename == "file"):
+        print(os.getcwd())
+        # filename = secure_filename(file.filename)
 
-        if file and (allowed_file(file.filename) or file.filename == "file"):
-            print(os.getcwd())
-            # filename = secure_filename(file.filename)
+        # Open POST file with PIL
+        # image_bytes = Image.open(io.BytesIO(file.read()))
 
-            # Open POST file with PIL
-            # image_bytes = Image.open(io.BytesIO(file.read()))
+        # Open POST file with CV2
+        nparr = np.fromstring(file.read(), np.uint8)
+        image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            # Open POST file with CV2
-            nparr = np.fromstring(file.read(), np.uint8)
-            image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        # Predict
+        results = model_lpd.predict(image_bytes)  # obtain predictions
 
-            # Predict
-            results = model_lpd.predict(image_bytes)  # obtain predictions
+        predictions = []
 
-            predictions = []
+        for r in results:
 
-            for r in results:
+            boxes = r.boxes
+            for box in boxes:
 
-                boxes = r.boxes
-                for box in boxes:
+                coords = box.xyxy[
+                    0
+                ]  # get box coordinates in (top, left, bottom, right) format
+                text = get_text(image_bytes, coords)
 
-                    coords = box.xyxy[
-                        0
-                    ]  # get box coordinates in (top, left, bottom, right) format
-                    text = get_text(image_bytes, coords)
+                pred_dict = {
+                    "text": text,
+                    "coords": coords.tolist(),
+                }
+                predictions.append(pred_dict)
 
-                    pred_dict = {
-                        "text": text,
-                        "coords": coords.tolist(),
-                    }
-                    predictions.append(pred_dict)
+        json_dict = {'plate_model': lpd_model_name, 'plates': predictions }
 
-            json_dict = {'plate_model': lpd_model_name, 'plates': predictions }
+        args = request.args
+        if args.get("isfrontend") is None:
+            return jsonify(json_dict)
 
-            args = request.args
-            if args.get("isfrontend") is None:
-                return jsonify(json_dict)
-
-            else:
-                session['json2html'] = json2html.convert(json_dict)
-                return redirect(
-                    url_for("upload_plate")
-                )
-
-    return "This API entrypoint needs a POST requests with a 'file' parameter"
+        else:
+            session['json2html'] = json2html.convert(json_dict)
+            return redirect(
+                url_for("upload_plate")
+            )
 
 
 # ########## DEMO FRONTEND ##########
@@ -378,6 +424,7 @@ def print_upload_form(API_URL: str, target: str, predictions_merged:str=None) ->
 
 
 @app.route("/upload_damages/")
+# @app.doc(hide=True)
 def upload_damages():
     """ A simple frontend page to upload image & try the predic_damages API endpoint. """
 
@@ -392,6 +439,7 @@ def upload_damages():
 
 
 @app.route("/upload_plate/")
+# @app.doc(hide=True)
 def upload_plate():
     """ A simple frontend page to upload image & try the predic_plate API endpoint. """
 
