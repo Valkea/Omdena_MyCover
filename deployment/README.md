@@ -75,7 +75,15 @@ Stop with CTRL+C *(once the tests are done, from another terminal...)*
 > * http://0.0.0.0:5000/upload_plate/ <br>
 > When posting an image from this simple frontend, the data will be send to the /predict_damages or /predict_plate urls and the result will be displayed in HTML.
 
+> Or even use the API Documentation `Try it out` button on the entrypoints.
+> http://0.0.0.0:5000/docs
+
 Note that the first request (particularly the plate request) might take some time. But once you've got the first prediction, it should run pretty fast for the others.
+
+### Documentation
+
+The API documentation is available at this endpoint: http://0.0.0.0:5000/docs
+
 
 
 ## 2. Docker
