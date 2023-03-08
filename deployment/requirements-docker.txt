@@ -11,3 +11,4 @@ onnx==1.12.0
 onnxruntime-gpu==1.12.1
 json2html
 apiflask
+flask-cors

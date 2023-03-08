@@ -9,6 +9,7 @@ from flask import Flask, flash, request, redirect, jsonify, url_for, session
 from apiflask import APIFlask, Schema, abort
 from apiflask.fields import Integer, String, File, List, Nested, Float
 from apiflask.validators import Length, OneOf
+from flask_cors import CORS
 
 from ultralytics import YOLO
 import easyocr
@@ -22,11 +23,6 @@ import onnxruntime as rt
 print("ONX:", rt.get_device())
 
 # --- Define input and outputs for APIFlask documentation ---
-
-#pets = [
-#    {'id': 0, 'name': 'Kitty', 'category': 'cat'},
-#    {'id': 1, 'name': 'Coco', 'category': 'dog'}
-#]
 
 class Image(Schema):
     file = File()
@@ -66,8 +62,6 @@ class PlatesFullOut(Schema):
     plates = List(Nested(PlatesOut), load_default=plate_sample)
 
 
-# ########## API ##########
-
 # --- Load Models ---
 
 cdd_model_name = "car_damage_detect_2.pt"
@@ -81,6 +75,7 @@ models_severity = {} # severity models are loaded on demand
 # app = Flask(__name__)
 app = APIFlask(__name__)
 app.secret_key = "super secret key"
+CORS(app)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 
@@ -105,7 +100,7 @@ def index():
     """
 
 
-# ##### PREDICT DAMAGES #####
+# ----- PREDICT DAMAGES -----
 
 default_thresholds = {
     "hood_damage":0.5,
@@ -262,7 +257,7 @@ def predict_damages(data):
             )
 
 
-# ##### PREDICT PLATE NUMBER #####
+# ----- PREDICT PLATE NUMBER -----
 
 reader = easyocr.Reader(["en"])
 
