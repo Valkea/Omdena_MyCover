@@ -2,13 +2,12 @@
 # coding: utf-8
 
 import os
-import io
 from pathlib import Path
 
 from flask import Flask, flash, request, redirect, jsonify, url_for, session
-from apiflask import APIFlask, Schema, abort
-from apiflask.fields import Integer, String, File, List, Nested, Float
-from apiflask.validators import Length, OneOf
+from apiflask import APIFlask, Schema
+from apiflask.fields import Integer, String, File, List, Nested
+from apiflask.validators import Length
 from flask_cors import CORS
 
 from ultralytics import YOLO
@@ -20,12 +19,15 @@ import numpy as np
 from json2html import json2html
 
 import onnxruntime as rt
+
 print("ONX:", rt.get_device())
 
 # --- Define input and outputs for APIFlask documentation ---
 
+
 class Image(Schema):
     file = File()
+
 
 damage_sample = [
     {
@@ -33,14 +35,12 @@ damage_sample = [
         "type": "headlight_damage",
         "coords": [420.0, 206.0, 552.0, 294.0],
         "severity": "0.5441662",
-        "severity_model": "severity_headlight_damage.onnx"
-    },]
+        "severity_model": "severity_headlight_damage.onnx",
+    },
+]
 
-plate_sample = [
-    {
-        "coords": [294.0, 215.0, 440.0, 262.0],
-        "text": "NOT READABLE"
-    }]
+plate_sample = [{"coords": [294.0, 215.0, 440.0, 262.0], "text": "NOT READABLE"}]
+
 
 class DamagesOut(Schema):
     type = String()
@@ -49,13 +49,16 @@ class DamagesOut(Schema):
     severity_model = String()
     action = String()
 
+
 class DamagesFullOut(Schema):
     damage_model = String(load_default="car_damage_detect.pt")
     damages = List(Nested(DamagesOut), load_default=damage_sample)
 
+
 class PlatesOut(Schema):
     coords = List(Integer(), many=True, validate=Length(4, 4))
     text = String()
+
 
 class PlatesFullOut(Schema):
     plate_model = String(load_default="car_damage_detect.pt")
@@ -66,10 +69,21 @@ class PlatesFullOut(Schema):
 
 cdd_model_name = "car_damage_detect_2.pt"
 lpd_model_name = "license_plate_detect_model.pt"
+sev_model_name = "severity_model.onnx"
 
 model_cdd = YOLO(Path("models", cdd_model_name))
 model_lpd = YOLO(Path("models", lpd_model_name))
-models_severity = {} # severity models are loaded on demand
+
+providers = [
+    "TensorrtExecutionProvider",
+    "CUDAExecutionProvider",
+    "CPUExecutionProvider",
+]
+model_severity = rt.InferenceSession(
+    str(Path("models", sev_model_name)), providers=providers
+)
+model_severity_input_name = "sequential_2_input"
+model_severity_output_name = "output_layer"
 
 # --- API Flask app ---
 # app = Flask(__name__)
@@ -102,26 +116,27 @@ def index():
 
 # ----- PREDICT DAMAGES -----
 
-default_thresholds = {
-    "hood_damage":0.5,
-    "front_bumper_damage":0.5,
-    "front_fender_damage":0.5,
-    "headlight_damage":0.5,
-    "front_windscreen_damage":0.1,
-    "sidemirror_damage":0.1,
-    "sidedoor_panel_damage":0.5,
-    "roof_damage":0.5,
-    "runnigboard_damage":0.5,
-    "pillar_damage":0.5,
-    "sidedoor_window_damage":0.1,
-    "rear_fender_damage":0.5,
-    "rear_windscreen_damage":0.1,
-    "taillight_damage":0.5,
-    "rear_bumper_damage":0.5,
-    "backdoor_panel_damage":0.5,
+DEFAULT_THRESHOLDS = {
+    "hood_damage": 0.5,
+    "front_bumper_damage": 0.5,
+    "front_fender_damage": 0.5,
+    "headlight_damage": 0.0,  # REPLACE
+    "front_windscreen_damage": 0.0,  # REPLACE
+    "sidemirror_damage": 0.0,  # REPLACE
+    "sidedoor_panel_damage": 0.5,
+    "roof_damage": 0.5,
+    "runnigboard_damage": 0.5,
+    "pillar_damage": 0.5,
+    "sidedoor_window_damage": 0.0,  # REPLACE
+    "rear_fender_damage": 0.5,
+    "rear_windscreen_damage": 0.0,  # REPLACE
+    "taillight_damage": 0.0,  # REPLACE
+    "rear_bumper_damage": 0.5,
+    "backdoor_panel_damage": 0.5,
 }
 
-def get_action(severity: float, class_name: str) -> str :
+
+def get_action(severity: float, class_name: str) -> str:
     """
     Returns the proper action according to the severity and the given threshold.
 
@@ -138,13 +153,13 @@ def get_action(severity: float, class_name: str) -> str :
         The suggested action
     """
 
-    threshold = default_thresholds[class_name]
-    print("Threshold:", class_name, threshold)
+    threshold = DEFAULT_THRESHOLDS[class_name]
 
     if severity > threshold:
         return "REPLACE"
     else:
         return "REPAIR"
+
 
 def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     """
@@ -167,12 +182,6 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
 
     input_size = (224, 224)
 
-    if class_name not in models_severity.keys():
-        # providers = ['CPUExecutionProvider']
-        providers = ['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
-        models_severity[class_name] = rt.InferenceSession(str(Path('models', f"severity_{class_name}.onnx")), providers=providers)
-        print(f"LOAD severity_{class_name}.onnx")
-
     # Extract plate coordinates
     x1, y1, x2, y2 = int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])
 
@@ -183,21 +192,20 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     # cv2.imwrite("severity.png", img)
 
     # -- Predict with ONNX
-    return models_severity[class_name].run(['output_layer'], {'sequential_39_input': [img]})[0][0][0]
+    return model_severity.run([model_severity_output_name], {model_severity_input_name: [img]})[0][0][0]
 
 
 @app.route("/predict_damages/", methods=["POST"])
-@app.input(Image, location='files')
+@app.input(Image, location="files")
 @app.output(DamagesFullOut)
 def predict_damages(data):
     """
     Define the API endpoint to get damages predictions from an image.
     This entrypoint awaits a POST request along with a 'file' parameter containing an image.
     """
-    
+
     # check if the post request has the file part
     if "file" not in request.files:
-        flash("No file part")
         print("No file part")
         return redirect(request.url)
     file = request.files["file"]
@@ -209,7 +217,7 @@ def predict_damages(data):
         return redirect(request.url)
 
     if file and (allowed_file(file.filename) or file.filename == "file"):
-        print(os.getcwd())
+
         # filename = secure_filename(file.filename)
 
         # Open POST file with PIL
@@ -233,10 +241,16 @@ def predict_damages(data):
                 ]  # get box coordinates in (top, left, bottom, right) format
                 classindex = box.cls
                 class_name = model_cdd.names[int(classindex)]
-                severity = get_severity(image_bytes, coords, class_name)
+
+                if DEFAULT_THRESHOLDS[class_name] == 0.0:
+                    model_name = None
+                    severity = 1.0
+                else:
+                    model_name = sev_model_name
+                    severity = get_severity(image_bytes, coords, class_name)
 
                 pred_dict = {
-                    "severity_model": f"severity_{class_name}.onnx",
+                    "severity_model": model_name,
                     "type": class_name,
                     "coords": coords.tolist(),
                     "severity": str(severity),
@@ -244,22 +258,21 @@ def predict_damages(data):
                 }
                 predictions.append(pred_dict)
 
-        json_dict = {'damage_model': cdd_model_name, 'damages': predictions}
+        json_dict = {"damage_model": cdd_model_name, "damages": predictions}
 
         args = request.args
         if args.get("isfrontend") is None:
             return jsonify(json_dict)
 
         else:
-            session['json2html'] = json2html.convert(json_dict)
-            return redirect(
-                url_for("upload_damages")
-            )
+            session["json2html"] = json2html.convert(json_dict)
+            return redirect(url_for("upload_damages"))
 
 
 # ----- PREDICT PLATE NUMBER -----
 
 reader = easyocr.Reader(["en"])
+
 
 def get_text(image: np.array, coords: np.array) -> str:
     """
@@ -302,7 +315,7 @@ def get_text(image: np.array, coords: np.array) -> str:
 
 
 @app.route("/predict_plate/", methods=["POST"])
-@app.input(Image, location='files')
+@app.input(Image, location="files")
 @app.output(PlatesFullOut)
 def predict_plate(data):
     """
@@ -313,7 +326,6 @@ def predict_plate(data):
     # check if the post request has the file part
     if "file" not in request.files:
         flash("No file part")
-        print("No file part")
         return redirect(request.url)
     file = request.files["file"]
 
@@ -324,7 +336,6 @@ def predict_plate(data):
         return redirect(request.url)
 
     if file and (allowed_file(file.filename) or file.filename == "file"):
-        print(os.getcwd())
         # filename = secure_filename(file.filename)
 
         # Open POST file with PIL
@@ -355,27 +366,25 @@ def predict_plate(data):
                 }
                 predictions.append(pred_dict)
 
-        json_dict = {'plate_model': lpd_model_name, 'plates': predictions }
+        json_dict = {"plate_model": lpd_model_name, "plates": predictions}
 
         args = request.args
         if args.get("isfrontend") is None:
             return jsonify(json_dict)
 
         else:
-            session['json2html'] = json2html.convert(json_dict)
-            return redirect(
-                url_for("upload_plate")
-            )
+            session["json2html"] = json2html.convert(json_dict)
+            return redirect(url_for("upload_plate"))
 
 
 # ########## DEMO FRONTEND ##########
 # This could be a different Flask script totally independant from the API!
 
 
-def print_upload_form(API_URL: str, target: str, predictions_merged:str=None) -> str:
+def print_upload_form(API_URL: str, target: str, predictions_merged: str = None) -> str:
     """
     This function defines the content of the frontend pages with upload option.
-    
+
     Parameters
     ----------
     API_URL: str
@@ -391,11 +400,8 @@ def print_upload_form(API_URL: str, target: str, predictions_merged:str=None) ->
         The HTML  content of the frontend page
     """
 
-
     if predictions_merged is not None:
-        predictions_merged_display = (
-            f"<h1>Returned content</h1><p>(The JSON is converted to HTML)</p><p>{predictions_merged}</p>"
-        )
+        predictions_merged_display = f"<h1>Returned content</h1><p>(The JSON is converted to HTML)</p><p>{predictions_merged}</p>"
     else:
         predictions_merged_display = ""
 
@@ -424,11 +430,10 @@ def upload_damages():
     """ A simple frontend page to upload image & try the predic_damages API endpoint. """
 
     API_URL = request.url_root
-    args = request.args
     predictions_merged = None
-    if 'json2html' in session:
-        predictions_merged = session['json2html']
-    session['json2html'] = None
+    if "json2html" in session:
+        predictions_merged = session["json2html"]
+    session["json2html"] = None
 
     return print_upload_form(API_URL, "predict_damages", predictions_merged)
 
@@ -439,11 +444,10 @@ def upload_plate():
     """ A simple frontend page to upload image & try the predic_plate API endpoint. """
 
     API_URL = request.url_root
-    args = request.args
     predictions_merged = None
-    if 'json2html' in session:
-        predictions_merged = session['json2html']
-    session['json2html'] = None
+    if "json2html" in session:
+        predictions_merged = session["json2html"]
+    session["json2html"] = None
 
     return print_upload_form(API_URL, "predict_plate", predictions_merged)
 
