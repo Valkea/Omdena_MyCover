@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>JustStreamIt</title>
+		<link rel="stylesheet" href="css/style.css">
+		<script src="js/script.js"></script>
+	</head>
+	<body>
+		 <p><input id="fileupload" type="file" name="fileupload" /></p>
+		 <fieldset>
+		 	<h1>Damages</h1>
+		 	<button id="pred_damages_btn" onclick="predict_damages()"> Predict Damages </button>
+		 	<p id='result_damages'></p>
+		 </fieldset>
+		 <fieldset>
+		 	<h1>Plate</h1>
+		 	<button id="pred_plates_btn" onclick="predict_plate()"> Predict Plate </button>
+		 	<p id='result_plate'></p>
+		 </fieldset>
+	</body>
+</html>

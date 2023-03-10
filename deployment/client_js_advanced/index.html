@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>MyCover simple client</title>
+		<link rel="stylesheet" href="css/style.css">
+		<script src="js/script.js"></script>
+		<style>
+			.flex-container {
+			  display: flex;
+			  background-color: DodgerBlue;
+			}
+			
+			.flex-container > div {
+			  background-color: #f1f1f1;
+			  margin: 10px;
+			  padding: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		 <p><input id="fileupload" type="file" accept="image/*" name="fileupload" onchange="onLoadImage(event)"/></p>
+		 <p><img id="output"/></p>
+		 <!-- canvas id= "myCanvas" width="1000" height="700"></canvas -->
+		 <fieldset>
+		 	<h1>Damages Detection</h1>
+		 	<button id="pred_damages_btn" onclick="predict_damages()"> Predict Damages </button>
+			<br><br>
+			<div class="flex-container">
+				<div><canvas id="canvas_damages"></canvas></div>
+				<div id='result_dmg'></div>
+			</div>
+			<div id='show_damages_json'></div>
+		 </fieldset>
+		 <fieldset>
+		 	<h1>Plate Reader</h1>
+		 	<button id="pred_plates_btn" onclick="predict_plate()"> Predict Plate </button>
+			<br><br>
+			<div class="flex-container">
+				<div><canvas id="canvas_plate"></canvas></div>
+				<div id='result_plate'></div>
+			</div>
+			<div id='show_plate_json'></div>
+		 </fieldset>
+	</body>
+</html>
