@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>MyCover simple client</title>
+		<link rel="stylesheet" href="css/style.css">
+		<script src="js/script.js"></script>
+		<style>
+			.flex-container {
+				display: flex;
+			  	background-color: DodgerBlue;
+			}
+			
+			.flex-container > div {
+			  	background-color: #f1f1f1;
+			  	margin: 10px;
+			  	padding: 10px;
+			}
+
+			#blueprint {
+				display: none;
+			}
+
+			.thumb {
+				height:100px;
+			}
+
+			.original {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		 <p><input id="filesupload" type="file" accept="image/*" name="filesupload" multiple/></p>
+		 <div id='originals'></div>
+
+		 <fieldset>
+			 <div id="all_results"></div>
+		 </fieldset>
+
+		 <div id="blueprint">
+			<div class="flex-container">
+				<div><canvas></canvas></div>
+				<div class='result'></div>
+				<div class='jsons'></div>
+			</div>
+			<div id='show_damages_json'></div>
+		 </div>
+	</body>
+</html>
