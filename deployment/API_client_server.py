@@ -229,18 +229,20 @@ def predict_damages(data):
 
         # Predict
         results = model_cdd.predict(image_bytes)  # obtain predictions
-        predictions = []
+        # results = model_cdd.predict(source=image_bytes, show=True)  # obtain predictions
+        predictions = {}
 
         for r in results:
 
+            # probs = r.probs
             boxes = r.boxes
+
             for box in boxes:
 
-                coords = box.xyxy[
-                    0
-                ]  # get box coordinates in (top, left, bottom, right) format
+                coords = box.xyxy[0]  # get box coordinates in (top, left, bottom, right) format
                 classindex = box.cls
                 class_name = model_cdd.names[int(classindex)]
+                # class_prob = probs[i]
 
                 if DEFAULT_THRESHOLDS[class_name] == 0.0:
                     model_name = None
@@ -254,10 +256,16 @@ def predict_damages(data):
                     "type": class_name,
                     "coords": coords.tolist(),
                     "severity": str(severity),
+                    # "probability": class_prob,
                     "action": get_action(severity, class_name),
                 }
-                predictions.append(pred_dict)
 
+                # remove duplicates part 1
+                if (class_name not in predictions) or (class_name in predictions and float(severity) > float(predictions[class_name]['severity'])):
+                    predictions[class_name] = pred_dict
+
+        # remove duplicates part 2
+        predictions = [predictions[x] for x in predictions]
         json_dict = {"damage_model": cdd_model_name, "damages": predictions}
 
         args = request.args
