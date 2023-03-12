@@ -197,7 +197,7 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     )[0][0][0]
 
 
-def get_price(class_name: str, action: str) -> float:
+def get_price(class_name: str, action: str) -> str:
     """
     This function is a temporary function that is supposed to be replaced with
     a function connecting to the database in order to get real prices
@@ -208,6 +208,11 @@ def get_price(class_name: str, action: str) -> float:
         the name of the detected damage
     action: string
         the name of the recommanded action (REPAIR / REPLACE)
+
+    Returns
+    -------
+    str:
+        The estimated price
     """
 
     prices = {
@@ -243,7 +248,7 @@ def get_price(class_name: str, action: str) -> float:
         },
     }
 
-    return prices[action][class_name]
+    return f"{prices[action][class_name]}$"
 
 
 @app.route("/predict_damages/", methods=["POST"])
