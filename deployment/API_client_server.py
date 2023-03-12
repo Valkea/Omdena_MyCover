@@ -192,7 +192,58 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     # cv2.imwrite("severity.png", img)
 
     # -- Predict with ONNX
-    return model_severity.run([model_severity_output_name], {model_severity_input_name: [img]})[0][0][0]
+    return model_severity.run(
+        [model_severity_output_name], {model_severity_input_name: [img]}
+    )[0][0][0]
+
+
+def get_price(class_name: str, action: str) -> float:
+    """
+    This function is a temporary function that is supposed to be replaced with
+    a function connecting to the database in order to get real prices
+
+    Parameters
+    ----------
+    class_name: string
+        the name of the detected damage
+    action: string
+        the name of the recommanded action (REPAIR / REPLACE)
+    """
+
+    prices = {
+        "REPAIR": {
+            "front_bumper_damage": 435,
+            "hood_damage": 492,
+            "front_fender_damage": 330,
+            "sidedoor_panel_damage": 368,
+            "roof_damage": 418,
+            "backdoor_panel_damage": 370,
+            "rear_bumper_damage": 399,
+            "rear_fender_damage": 323,
+            "runnigboard_damage": 342,
+            "pillar_damage": 322,
+        },
+        "REPLACE": {
+            "front_bumper_damage": 547,
+            "hood_damage": 711,
+            "front_fender_damage": 517,
+            "sidedoor_panel_damage": 688,
+            "roof_damage": 799,
+            "backdoor_panel_damage": 754,
+            "rear_bumper_damage": 631,
+            "rear_fender_damage": 588,
+            "runnigboard_damage": 499,
+            "pillar_damage": 476,
+            "headlight_damage": 195,
+            "front_windscreen_damage": 660,
+            "sidemirror_damage": 175,
+            "sidedoor_window_damage": 337,
+            "rear_windscreen_damage": 575,
+            "taillight_damage": 138,
+        },
+    }
+
+    return prices[action][class_name]
 
 
 @app.route("/predict_damages/", methods=["POST"])
@@ -239,7 +290,9 @@ def predict_damages(data):
 
             for box in boxes:
 
-                coords = box.xyxy[0]  # get box coordinates in (top, left, bottom, right) format
+                coords = box.xyxy[
+                    0
+                ]  # get box coordinates in (top, left, bottom, right) format
                 classindex = box.cls
                 class_name = model_cdd.names[int(classindex)]
                 # class_prob = probs[i]
@@ -251,17 +304,23 @@ def predict_damages(data):
                     model_name = sev_model_name
                     severity = get_severity(image_bytes, coords, class_name)
 
+                action = get_action(severity, class_name)
+
                 pred_dict = {
                     "severity_model": model_name,
                     "type": class_name,
                     "coords": coords.tolist(),
                     "severity": str(severity),
                     # "probability": class_prob,
-                    "action": get_action(severity, class_name),
+                    "price": get_price(class_name, action),
+                    "action": action,
                 }
 
                 # remove duplicates part 1
-                if (class_name not in predictions) or (class_name in predictions and float(severity) > float(predictions[class_name]['severity'])):
+                if (class_name not in predictions) or (
+                    class_name in predictions
+                    and float(severity) > float(predictions[class_name]["severity"])
+                ):
                     predictions[class_name] = pred_dict
 
         # remove duplicates part 2
