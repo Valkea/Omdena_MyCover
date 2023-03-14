@@ -4,7 +4,7 @@
 import os
 from pathlib import Path
 
-from flask import Flask, flash, request, redirect, jsonify, url_for, session
+from flask import Flask, flash, request, redirect, jsonify, url_for, session, abort
 from apiflask import APIFlask, Schema
 from apiflask.fields import Integer, String, File, List, Nested
 from apiflask.validators import Length
@@ -19,6 +19,9 @@ import numpy as np
 from json2html import json2html
 
 import onnxruntime as rt
+
+# from signal import signal, SIGPIPE, SIG_DFL
+# signal(SIGPIPE, SIG_DFL)
 
 print("ONX:", rt.get_device())
 
@@ -35,11 +38,19 @@ damage_sample = [
         "type": "headlight_damage",
         "coords": [420.0, 206.0, 552.0, 294.0],
         "severity": "0.5441662",
-        "severity_model": "severity_headlight_damage.onnx",
+        "severity_model": "severity_model_001.onnx",
+        "price": "111$",
+        "file": "my_photo.jpg",
     },
 ]
 
-plate_sample = [{"coords": [294.0, 215.0, 440.0, 262.0], "text": "NOT READABLE"}]
+plate_sample = [
+    {
+        "coords": [294.0, 215.0, 440.0, 262.0],
+        "text": "NOT READABLE",
+        "file": "my_photo.jpg",
+    }
+]
 
 
 class DamagesOut(Schema):
@@ -48,6 +59,8 @@ class DamagesOut(Schema):
     severity = String()
     severity_model = String()
     action = String()
+    price = String()
+    file = String()
 
 
 class DamagesFullOut(Schema):
@@ -58,6 +71,7 @@ class DamagesFullOut(Schema):
 class PlatesOut(Schema):
     coords = List(Integer(), many=True, validate=Length(4, 4))
     text = String()
+    file = String()
 
 
 class PlatesFullOut(Schema):
@@ -89,12 +103,43 @@ model_severity_output_name = "output_layer"
 # app = Flask(__name__)
 app = APIFlask(__name__)
 app.secret_key = "super secret key"
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * 20
+
 CORS(app)
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
+
+ALLOWED_EXTENSIONS = {
+    "bmp",
+    "dng",
+    "jpeg",
+    "jpg",
+    "mpo",
+    "png",
+    "tif",
+    "tiff",
+    "webp",
+    "pfm",  # images
+    # "asf",
+    # "avi",
+    # "gif",
+    # "m4v",
+    # "mkv",
+    # "mov",
+    # "mp4",
+    # "mpeg",
+    # "mpg",
+    # "ts",
+    # "wmv",
+    # "webm",  # videos
+}
 
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def filter_images(f):
+    # filename = secure_filename(file.filename)
+    return allowed_file(f.filename)
 
 
 # ########## API ENTRY POINTS (BACKEND) ##########
@@ -251,94 +296,152 @@ def get_price(class_name: str, action: str) -> str:
     return f"{prices[action][class_name]}$"
 
 
-@app.route("/predict_damages/", methods=["POST"])
+class RestrictDamagesPerClass:
+
+    dmg_dict = {
+        "hood_damage": {"max": 1},
+        "front_bumper_damage": {"max": 1},
+        "front_fender_damage": {"max": 2},
+        "headlight_damage": {"max": 2},
+        "front_windscreen_damage": {"max": 1},
+        "sidemirror_damage": {"max": 2},
+        "sidedoor_panel_damage": {"max": 4},
+        "roof_damage": {"max": 1},
+        "runnigboard_damage": {"max": 2},
+        "pillar_damage": {"max": 4},
+        "sidedoor_window_damage": {"max": 4},
+        "rear_fender_damage": {"max": 2},
+        "rear_windscreen_damage": {"max": 1},
+        "taillight_damage": {"max": 2},
+        "rear_bumper_damage": {"max": 1},
+        "backdoor_panel_damage": {"max": 1},
+    }
+
+    def __init__(self):
+        for dmg_class in self.dmg_dict:
+            self.dmg_dict[dmg_class]["data"] = []
+
+    def add_damage(self, dmg_class, data, score):
+        self.dmg_dict[dmg_class]["data"].append((data, score))
+
+    def get_selected(self):
+        out_dict = self.dmg_dict.copy()
+
+        # sort & trim
+        for k in out_dict:
+            out_dict[k] = sorted(out_dict[k]["data"], key=lambda x: x[1], reverse=True)[
+                : out_dict[k]["max"]
+            ]
+
+        # flatten the tuples
+        flatten = []
+        [flatten.extend(x) for x in out_dict.values()]
+
+        # keep only json data
+        jsons = [x[0] for x in flatten]
+
+        return jsons
+
+
+def preprocess_image(f):
+
+    # Open POST file with PIL
+    # image_bytes = Image.open(io.BytesIO(file.read()))
+
+    # Open POST file with CV2
+    nparr = np.fromstring(f.read(), np.uint8)
+    image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    return image_bytes
+
+
+# Handling error 404 and displaying relevant web page
+@app.errorhandler(400)
+def not_found_error(error):
+    return {"error": str(error)}, 400
+
+
+@app.route("/predict_damages", methods=["POST"])
 @app.input(Image, location="files")
 @app.output(DamagesFullOut)
 def predict_damages(data):
     """
-    Define the API endpoint to get damages predictions from an image.
-    This entrypoint awaits a POST request along with a 'file' parameter containing an image.
+    Define the API endpoint to get damages predictions from one or more images.
+    This entrypoint awaits a POST request along with a 'file' parameter containing image(s).
     """
 
-    # check if the post request has the file part
+    # --- CHECK IF THE POST REQUEST HAS THE FILE PART
+
     if "file" not in request.files:
         print("No file part")
-        return redirect(request.url)
-    file = request.files["file"]
+        abort(400, description="The 'file' form-data field is missing in the request.")
 
-    # If the user does not select a file, the browser submits an
-    # empty file without a filename.
-    if file.filename == "":
-        flash("No selected file")
-        return redirect(request.url)
+    # --- CHECK IF THE FILEPART CONTAINS DATA
 
-    if file and (allowed_file(file.filename) or file.filename == "file"):
+    files = request.files.getlist("file")
+    if len(files) == 1 and files[0].filename == "":
+        print("No data into the filepart")
+        abort(400, description="There is no data in the 'file' form-data field.")
+    else:
+        print(f"There are {len(files)} files in the filepart")
 
-        # filename = secure_filename(file.filename)
+    # --- CHECK IF THERE IS AT LEAST ONE FILE WITH A COMPATIBLE FORMAT
 
-        # Open POST file with PIL
-        # image_bytes = Image.open(io.BytesIO(file.read()))
+    filtered_files = list(filter(filter_images, files))
+    if len(filtered_files) == 0:
+        abort(400, description="The provided file(s) format is not supported.")
 
-        # Open POST file with CV2
-        nparr = np.fromstring(file.read(), np.uint8)
-        image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    preprocessed_files = [preprocess_image(x) for x in filtered_files]
 
-        # Predict
-        results = model_cdd.predict(image_bytes)  # obtain predictions
-        # results = model_cdd.predict(source=image_bytes, show=True)  # obtain predictions
-        predictions = {}
+    # --- PREDICT
 
-        for r in results:
+    results = model_cdd.predict(preprocessed_files, agnostic_nms=True)
+    predictions = RestrictDamagesPerClass()
 
-            # probs = r.probs
-            boxes = r.boxes
+    for i, r in enumerate(results):
 
-            for box in boxes:
+        boxes = r.boxes
 
-                coords = box.xyxy[
-                    0
-                ]  # get box coordinates in (top, left, bottom, right) format
-                classindex = box.cls
-                class_name = model_cdd.names[int(classindex)]
-                # class_prob = probs[i]
+        for box in boxes:
 
-                if DEFAULT_THRESHOLDS[class_name] == 0.0:
-                    model_name = None
-                    severity = 1.0
-                else:
-                    model_name = sev_model_name
-                    severity = get_severity(image_bytes, coords, class_name)
+            # get box coordinates in (top, left, bottom, right) format
+            coords = box.xyxy[0]
 
-                action = get_action(severity, class_name)
+            classindex = box.cls
+            class_name = model_cdd.names[int(classindex)]
 
-                pred_dict = {
-                    "severity_model": model_name,
-                    "type": class_name,
-                    "coords": coords.tolist(),
-                    "severity": str(severity),
-                    # "probability": class_prob,
-                    "price": get_price(class_name, action),
-                    "action": action,
-                }
+            if DEFAULT_THRESHOLDS[class_name] == 0.0:
+                model_name = None
+                severity = 1.0
+            else:
+                model_name = sev_model_name
+                severity = get_severity(preprocessed_files[i], coords, class_name)
 
-                # remove duplicates part 1
-                if (class_name not in predictions) or (
-                    class_name in predictions
-                    and float(severity) > float(predictions[class_name]["severity"])
-                ):
-                    predictions[class_name] = pred_dict
+            action = get_action(severity, class_name)
 
-        # remove duplicates part 2
-        predictions = [predictions[x] for x in predictions]
-        json_dict = {"damage_model": cdd_model_name, "damages": predictions}
+            pred_dict = {
+                "severity_model": model_name,
+                "type": class_name,
+                "coords": coords.tolist(),
+                "severity": str(severity),
+                "price": get_price(class_name, action),
+                "action": action,
+                "file": filtered_files[i].filename,
+            }
 
-        args = request.args
-        if args.get("isfrontend") is None:
-            return jsonify(json_dict)
+            predictions.add_damage(class_name, pred_dict, severity)
 
-        else:
-            session["json2html"] = json2html.convert(json_dict)
-            return redirect(url_for("upload_damages"))
+    # --- RETURN ANSWER
+
+    json_dict = {"damage_model": cdd_model_name, "damages": predictions.get_selected()}
+
+    args = request.args
+    if args.get("isfrontend") is None:
+        print(jsonify(json_dict))
+        return jsonify(json_dict)
+
+    else:
+        session["json2html"] = json2html.convert(json_dict)
+        return redirect(url_for("upload_damages"))
 
 
 # ----- PREDICT PLATE NUMBER -----
@@ -386,7 +489,7 @@ def get_text(image: np.array, coords: np.array) -> str:
     return text
 
 
-@app.route("/predict_plate/", methods=["POST"])
+@app.route("/predict_plate", methods=["POST"])
 @app.input(Image, location="files")
 @app.output(PlatesFullOut)
 def predict_plate(data):
@@ -395,58 +498,60 @@ def predict_plate(data):
     This entrypoint awaits a POST request along with a 'file' parameter containing an image.
     """
 
-    # check if the post request has the file part
+    # --- CHECK IF THE POST REQUEST HAS THE FILE PART
+
     if "file" not in request.files:
-        flash("No file part")
-        return redirect(request.url)
-    file = request.files["file"]
+        print("No file part")
+        abort(400, description="The 'file' form-data field is missing in the request.")
 
-    # If the user does not select a file, the browser submits an
-    # empty file without a filename.
-    if file.filename == "":
-        flash("No selected file")
-        return redirect(request.url)
+    # --- CHECK IF THE FILEPART CONTAINS DATA
 
-    if file and (allowed_file(file.filename) or file.filename == "file"):
-        # filename = secure_filename(file.filename)
+    files = request.files.getlist("file")
+    if len(files) == 1 and files[0].filename == "":
+        print("No data into the filepart")
+        abort(400, description="There is no data in the 'file' form-data field.")
+    else:
+        print(f"There are {len(files)} files in the filepart")
 
-        # Open POST file with PIL
-        # image_bytes = Image.open(io.BytesIO(file.read()))
+    # --- CHECK IF THERE IS AT LEAST ONE FILE WITH A COMPATIBLE FORMAT
 
-        # Open POST file with CV2
-        nparr = np.fromstring(file.read(), np.uint8)
-        image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    filtered_files = list(filter(filter_images, files))
+    if len(filtered_files) == 0:
+        abort(400, description="The provided file(s) format is not supported.")
 
-        # Predict
-        results = model_lpd.predict(image_bytes)  # obtain predictions
+    preprocessed_files = [preprocess_image(x) for x in filtered_files]
 
-        predictions = []
+    # --- PREDICT
 
-        for r in results:
+    results = model_cdd.predict(preprocessed_files, agnostic_nms=True)
+    predictions = []
 
-            boxes = r.boxes
-            for box in boxes:
+    for i, r in enumerate(results):
 
-                coords = box.xyxy[
-                    0
-                ]  # get box coordinates in (top, left, bottom, right) format
-                text = get_text(image_bytes, coords)
+        boxes = r.boxes
+        for box in boxes:
 
-                pred_dict = {
-                    "text": text,
-                    "coords": coords.tolist(),
-                }
-                predictions.append(pred_dict)
+            coords = box.xyxy[
+                0
+            ]  # get box coordinates in (top, left, bottom, right) format
+            text = get_text(preprocessed_files[i], coords)
 
-        json_dict = {"plate_model": lpd_model_name, "plates": predictions}
+            pred_dict = {
+                "text": text,
+                "coords": coords.tolist(),
+                "file": filtered_files[i].filename,
+            }
+            predictions.append(pred_dict)
 
-        args = request.args
-        if args.get("isfrontend") is None:
-            return jsonify(json_dict)
+    json_dict = {"plate_model": lpd_model_name, "plates": predictions}
 
-        else:
-            session["json2html"] = json2html.convert(json_dict)
-            return redirect(url_for("upload_plate"))
+    args = request.args
+    if args.get("isfrontend") is None:
+        return jsonify(json_dict)
+
+    else:
+        session["json2html"] = json2html.convert(json_dict)
+        return redirect(url_for("upload_plate"))
 
 
 # ########## DEMO FRONTEND ##########
@@ -528,4 +633,4 @@ def upload_plate():
 
 if __name__ == "__main__":
     current_port = int(os.environ.get("PORT") or 5000)
-    app.run(debug=True, host="0.0.0.0", port=current_port)
+    app.run(debug=True, host="0.0.0.0", port=current_port, threaded=True)
