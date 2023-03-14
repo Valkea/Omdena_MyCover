@@ -1,8 +1,8 @@
 
 // --- GLOBAL VARIABLES ---
 
-const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
-// const api_url = "http://127.0.0.1:5000/";
+// const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
+const api_url = "http://127.0.0.1:5000/";
 //
 var winW = window.innerWidth;
 var winH = window.innerHeight;
@@ -81,8 +81,8 @@ function predict_dmg_loop(files, index=0){
      	postPicture(index, files, "predict_damages", saveJson)
 }
 
-function predict_plate_loop(files, index=0){
-     	postPicture(index, files, "predict_plate", saveJson)
+function predict_plates_loop(files, index=0){
+     	postPicture(index, files, "predict_plates", saveJson)
 }
 
 function postPicture(index, files, action, callback) {
@@ -119,9 +119,9 @@ function saveJson(json, index, files, action){
 			}
 			save_json[index] = new_item;
 
-			predict_plate_loop(files, index)
+			predict_plates_loop(files, index)
 			break;
-		case "predict_plate":
+		case "predict_plates":
 			save_json[index]['plates_json'] = json
 			showResult(save_json[index], index)
 
@@ -167,7 +167,7 @@ function addBullets(result_cell, jsons){
 
 		result = "<h3>Damage "+i+"</h3><ul>"
 		for (const [key, value] of Object.entries(damage)) {
-			if( ['action', 'severity', 'type'].includes(key) ){
+			if( ['action', 'severity', 'type', 'price'].includes(key) ){
 				result += "<li><strong>"+key+":</strong> "+value+"</li>";
 			}
 		}
