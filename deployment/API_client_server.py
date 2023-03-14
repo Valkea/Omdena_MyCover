@@ -70,20 +70,7 @@ def preprocess_image(f):
     return image_bytes
 
 
-# ########## API ENTRY POINTS (BACKEND) ##########
-
-
-# ----- PREDICT DAMAGES -----
-
-
-@app.route("/predict_damages", methods=["POST"])
-@app.input(Image, location="files")
-@app.output(DamagesFullOut)
-def route_predict_damages(data):
-    """
-    Define the API endpoint to get damages predictions from one or more images.
-    This entrypoint awaits a POST request along with a 'file' parameter containing image(s).
-    """
+def check_uploaded_files(request: request) -> list:
 
     # --- CHECK IF THE POST REQUEST HAS THE FILE PART
 
@@ -106,6 +93,27 @@ def route_predict_damages(data):
     if len(filtered_files) == 0:
         abort(400, description="The provided file(s) format is not supported.")
 
+    return filtered_files
+
+
+# ########## API ENTRY POINTS (BACKEND) ##########
+
+
+# ----- PREDICT DAMAGES -----
+
+@app.route("/predict_damages", methods=["POST"])
+@app.input(Image, location="files")
+@app.output(DamagesFullOut)
+def route_predict_damages(data):
+    """
+    Define the API endpoint to get damages predictions from one or more images.
+    This entrypoint awaits a POST request along with a 'file' parameter containing image(s).
+    """
+
+    # --- CHECK FILES
+    filtered_files = check_uploaded_files(request)
+
+    # --- PREPARE FILES
     preprocessed_files = [preprocess_image(x) for x in filtered_files]
 
     # --- PREDICT
@@ -125,7 +133,6 @@ def route_predict_damages(data):
 
 # ----- PREDICT PLATES -----
 
-
 @app.route("/predict_plates", methods=["POST"])
 @app.input(Image, location="files")
 @app.output(PlatesFullOut)
@@ -135,27 +142,10 @@ def route_predict_plates(data):
     This entrypoint awaits a POST request along with a 'file' parameter containing an image.
     """
 
-    # --- CHECK IF THE POST REQUEST HAS THE FILE PART
+    # --- CHECK FILES
+    filtered_files = check_uploaded_files(request)
 
-    if "file" not in request.files:
-        print("No file part")
-        abort(400, description="The 'file' form-data field is missing in the request.")
-
-    # --- CHECK IF THE FILEPART CONTAINS DATA
-
-    files = request.files.getlist("file")
-    if len(files) == 1 and files[0].filename == "":
-        print("No data into the filepart")
-        abort(400, description="There is no data in the 'file' form-data field.")
-    else:
-        print(f"There are {len(files)} files in the filepart")
-
-    # --- CHECK IF THERE IS AT LEAST ONE FILE WITH A COMPATIBLE FORMAT
-
-    filtered_files = list(filter(filter_images, files))
-    if len(filtered_files) == 0:
-        abort(400, description="The provided file(s) format is not supported.")
-
+    # --- PREPARE FILES
     preprocessed_files = [preprocess_image(x) for x in filtered_files]
 
     # --- PREDICT
