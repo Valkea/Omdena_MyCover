@@ -1,9 +1,9 @@
 
 // --- GLOBAL VARIABLES ---
 
-// const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
-const api_url = "http://127.0.0.1:5000/";
-//
+const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
+// const api_url = "http://127.0.0.1:5000/";
+
 var winW = window.innerWidth;
 var winH = window.innerHeight;
 
@@ -172,14 +172,16 @@ function showResult( files, jsons ){
 				var result_cell = div_source.getElementsByClassName('result')
 				addBulletDamages(result_cell[0], damage, i, damage.probable_duplicate)
 
+				var loader_div = div_source.getElementsByClassName("loader");
+				loader_div[0].style.display = 'none';
+
+				var canvas_div = div_source.getElementsByClassName("canvas");
+				canvas_div[0].style.display = 'block';
+
 				var canvas = div_source.getElementsByTagName("canvas")
 				newW = Math.min(winW/2,600)
  				drawCanvas(canvas[0], file.name, newW, newW, jsons);
 
-				// TODO il faut encore ajouter
-				// un truc de chargement
-				// nettoyer les elements
-				// nettoyer le code
 				i++;
 			}
 		}

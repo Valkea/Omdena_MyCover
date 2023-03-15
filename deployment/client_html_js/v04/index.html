@@ -6,49 +6,6 @@
 		<title>MyCover demo client (batch predict)</title>
 		<link rel="stylesheet" href="css/style.css">
 		<script src="js/script.js"></script>
-		<style>
-			h1 {
-				text-align: center;
-			}
-
-			.flex-container {
-				display: flex;
-			  	background-color: lightgray;
-			}
-			
-			.flex-container > div {
-			  	background-color: #f1f1f1;
-			  	margin: 10px;
-			  	padding: 10px;
-			}
-			.flex-container > .result{
-				width: 100%;
-			}
-
-			#blueprint {
-				display: none;
-			}
-
-			.thumb {
-				height:100px;
-			}
-
-			.original {
-				display: none;
-			}
-			.duplicate {
-				color: gray;
-			}
-			#json_result {
-				color: gray;
-				overflow-wrap: anywhere;
-			}
-
-			#originals {
-				text-align: center;
-				margin-bottom: 15px;
-			}
-		</style>
 	</head>
 	<body>
 		<h1>MyCover demo</h1>
@@ -63,7 +20,8 @@
 
 		<div id="blueprint">
 			<div class="flex-container">
-				<div><canvas></canvas></div>
+				<div class='canvas'><canvas></canvas></div>
+				<div class='loader'></div>
 				<div class='result'></div>
 			</div>
 			<div id='show_damages_json'></div>
