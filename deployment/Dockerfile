@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements-docker.txt
 
 # --- Copy project files
 COPY ["API_client_server.py", "./"]
+COPY ["api_internals/*.py", "./api_internals/"]
 COPY ["models/*", "./models/"]
 
 # --- Start server
