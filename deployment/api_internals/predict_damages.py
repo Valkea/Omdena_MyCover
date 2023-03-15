@@ -173,18 +173,18 @@ class RestrictDamagesPerClass:
     dmg_dict = {
         "hood_damage": {"max": 1},
         "front_bumper_damage": {"max": 1},
-        "front_fender_damage": {"max": 2},
-        "headlight_damage": {"max": 2},
+        "front_fender_damage": {"max": 1},
+        "headlight_damage": {"max": 1},
         "front_windscreen_damage": {"max": 1},
-        "sidemirror_damage": {"max": 2},
-        "sidedoor_panel_damage": {"max": 4},
+        "sidemirror_damage": {"max": 1},
+        "sidedoor_panel_damage": {"max": 1},
         "roof_damage": {"max": 1},
-        "runnigboard_damage": {"max": 2},
-        "pillar_damage": {"max": 4},
-        "sidedoor_window_damage": {"max": 4},
-        "rear_fender_damage": {"max": 2},
+        "runnigboard_damage": {"max": 1},
+        "pillar_damage": {"max": 1},
+        "sidedoor_window_damage": {"max": 1},
+        "rear_fender_damage": {"max": 1},
         "rear_windscreen_damage": {"max": 1},
-        "taillight_damage": {"max": 2},
+        "taillight_damage": {"max": 1},
         "rear_bumper_damage": {"max": 1},
         "backdoor_panel_damage": {"max": 1},
     }
@@ -199,17 +199,23 @@ class RestrictDamagesPerClass:
     def get_selected(self):
         out_dict = self.dmg_dict.copy()
 
-        # sort & trim
+        # --- SORT & TRIM
         for k in out_dict:
-            out_dict[k] = sorted(out_dict[k]["data"], key=lambda x: x[1], reverse=True)[
-                : out_dict[k]["max"]
-            ]
+            out_dict[k] = sorted(out_dict[k]["data"], key=lambda x: x[1], reverse=True)
 
-        # flatten the tuples
+            # --- REMOVE EXTA DAMAGES
+            # out_dict[k] = out_dict[k][: self.dmg_dict[k]["max"]] # cut to MAX
+
+            # --- ADD DUPLICATED TAGS
+            if len(out_dict[k]) > 0:
+                for j in range(self.dmg_dict[k]['max'], len(out_dict[k])):
+                    out_dict[k][j][0]['probable_duplicate'] = True
+
+        # --- FLATTEN THE TUPLES
         flatten = []
         [flatten.extend(x) for x in out_dict.values()]
 
-        # keep only json data
+        # --- KEEP ONLY JSON DATA
         jsons = [x[0] for x in flatten]
 
         return jsons
@@ -252,6 +258,7 @@ def predict_damages(filtered_files: list, preprocessed_files: list) -> list:
                 "price": get_price(class_name, action),
                 "action": action,
                 "file": filtered_files[i].filename,
+                "probable_duplicate": False,
             }
 
             predictions.add_damage(class_name, pred_dict, severity)

@@ -1,5 +1,5 @@
 from apiflask import APIFlask, Schema
-from apiflask.fields import Integer, String, File, List, Nested
+from apiflask.fields import Integer, String, File, List, Nested, Boolean
 from apiflask.validators import Length
 
 
@@ -19,6 +19,7 @@ damage_sample = [
         "severity_model": "severity_model_001.onnx",
         "price": "111$",
         "file": "my_photo.jpg",
+        "probable_duplicate": False,
     },
 ]
 
@@ -39,6 +40,7 @@ class DamagesOut(Schema):
     action = String()
     price = String()
     file = String()
+    probable_duplicate = Boolean()
 
 
 class DamagesFullOut(Schema):

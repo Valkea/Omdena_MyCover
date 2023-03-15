@@ -55,6 +55,9 @@ So in order to perenize this, we can use the following command:
 
 > (remote) >>> screen -R deploy python API_client_server.py
 
+or using gunicorn (which is more appropriate for deployement)
+> (remote) >>> screen -R deploy gunicorn API_client_server:app --bind 0.0.0.0:5000 --timeout=60 --threads=2
+
 And hence the API server will keep running even if the terminal is closed.
 
 But, next time you connect to the EC2 instance you won't see the API running and won't be able to stop it...
