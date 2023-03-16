@@ -60,7 +60,7 @@ def get_text(image: np.array, coords: np.array) -> str:
 # --- MAIN FUNCTION
 
 
-def predict_plates(filtered_files: list, preprocessed_files: list) -> list:
+def predict_plates(filtered_files: list, preprocessed_files: list, original_ratios: list) -> list:
 
     results = model_lpd.predict(preprocessed_files, agnostic_nms=True)
     predictions = []
@@ -70,14 +70,22 @@ def predict_plates(filtered_files: list, preprocessed_files: list) -> list:
         boxes = r.boxes
         for box in boxes:
 
-            coords = box.xyxy[
-                0
-            ]  # get box coordinates in (top, left, bottom, right) format
+            # get box coordinates in (top, left, bottom, right) format
+            coords = box.xyxy[0]
+
+            coords_ratio = coords.tolist()
+            coords_ratio[0] *= original_ratios[i][1]
+            coords_ratio[1] *= original_ratios[i][0]
+            coords_ratio[2] *= original_ratios[i][1]
+            coords_ratio[3] *= original_ratios[i][0]
+
+            print(coords, coords_ratio)
+
             text = get_text(preprocessed_files[i], coords)
 
             pred_dict = {
                 "text": text,
-                "coords": coords.tolist(),
+                "coords": coords_ratio,
                 "file": filtered_files[i].filename,
             }
             predictions.append(pred_dict)

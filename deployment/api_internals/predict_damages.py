@@ -224,7 +224,7 @@ class RestrictDamagesPerClass:
 # --- MAIN FUNCTION
 
 
-def predict_damages(filtered_files: list, preprocessed_files: list) -> list:
+def predict_damages(filtered_files: list, preprocessed_files: list, original_ratios: list) -> list:
 
     results = model_cdd.predict(preprocessed_files, agnostic_nms=True)
     predictions = RestrictDamagesPerClass()
@@ -237,6 +237,12 @@ def predict_damages(filtered_files: list, preprocessed_files: list) -> list:
 
             # get box coordinates in (top, left, bottom, right) format
             coords = box.xyxy[0]
+
+            coords_ratio = coords.tolist()
+            coords_ratio[0] *= original_ratios[i][1]
+            coords_ratio[1] *= original_ratios[i][0]
+            coords_ratio[2] *= original_ratios[i][1]
+            coords_ratio[3] *= original_ratios[i][0]
 
             classindex = box.cls
             class_name = model_cdd.names[int(classindex)]
@@ -253,7 +259,7 @@ def predict_damages(filtered_files: list, preprocessed_files: list) -> list:
             pred_dict = {
                 "severity_model": model_name,
                 "type": class_name,
-                "coords": coords.tolist(),
+                "coords": coords_ratio,
                 "severity": str(severity),
                 "price": get_price(class_name, action),
                 "action": action,

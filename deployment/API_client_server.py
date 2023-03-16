@@ -59,15 +59,31 @@ def filter_images(f):
     return allowed_file(f.filename)
 
 
+def prepare_images(filtered_files):
+    preprocessed_data = [preprocess_image(x) for x in filtered_files]
+    preprocessed_data = list(map(list, zip(*preprocessed_data)))
+
+    preprocessed_files, original_ratios = preprocessed_data[0], preprocessed_data[1]
+    return preprocessed_files, original_ratios
+
+
 def preprocess_image(f):
 
     # Open POST file with PIL
     # image_bytes = Image.open(io.BytesIO(file.read()))
 
     # Open POST file with CV2
+
     nparr = np.fromstring(f.read(), np.uint8)
     image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    return image_bytes
+
+    newSize = 600
+    resized = cv2.resize(image_bytes, (newSize, newSize), interpolation=cv2.INTER_LINEAR)
+
+    ratioW = image_bytes.shape[0] / newSize
+    ratioH = image_bytes.shape[1] / newSize
+
+    return resized, (ratioW, ratioH)
 
 
 def check_uploaded_files(request: request) -> list:
@@ -114,10 +130,10 @@ def route_predict_damages(data):
     filtered_files = check_uploaded_files(request)
 
     # --- PREPARE FILES
-    preprocessed_files = [preprocess_image(x) for x in filtered_files]
+    preprocessed_files, original_ratios = prepare_images(filtered_files)
 
     # --- PREDICT
-    json_damages = predict_damages(filtered_files, preprocessed_files)
+    json_damages = predict_damages(filtered_files, preprocessed_files, original_ratios)
     json_dict = {"damage_model": cdd_model_name, "damages": json_damages}
 
     # --- RETURN ANSWER
@@ -146,13 +162,13 @@ def route_predict_plates(data):
     filtered_files = check_uploaded_files(request)
 
     # --- PREPARE FILES
-    preprocessed_files = [preprocess_image(x) for x in filtered_files]
+    preprocessed_files, original_ratios = prepare_images(filtered_files)
 
     # --- PREDICT
-
-    json_plates = predict_plates(filtered_files, preprocessed_files)
+    json_plates = predict_plates(filtered_files, preprocessed_files, original_ratios)
     json_dict = {"plate_model": lpd_model_name, "plates": json_plates}
 
+    # --- RETURN ANSWER
     args = request.args
     if args.get("isfrontend") is None:
         return jsonify(json_dict)
