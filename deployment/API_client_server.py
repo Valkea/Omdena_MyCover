@@ -77,7 +77,7 @@ def preprocess_image(f):
     nparr = np.fromstring(f.read(), np.uint8)
     image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    newSize = 600
+    newSize = 640
     resized = cv2.resize(image_bytes, (newSize, newSize), interpolation=cv2.INTER_LINEAR)
 
     ratioW = image_bytes.shape[0] / newSize

@@ -79,8 +79,6 @@ def predict_plates(filtered_files: list, preprocessed_files: list, original_rati
             coords_ratio[2] *= original_ratios[i][1]
             coords_ratio[3] *= original_ratios[i][0]
 
-            print(coords, coords_ratio)
-
             text = get_text(preprocessed_files[i], coords)
 
             pred_dict = {
