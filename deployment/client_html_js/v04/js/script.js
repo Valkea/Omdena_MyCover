@@ -165,20 +165,6 @@ function showResult( files, jsons ){
 
 	for(const file of files){
 		let i = 0
-		for(const damage of jsons['damages_json']['damages']){
-			if(damage.file == file.name)
-			{
- 				var div_source = document.getElementById("block_"+file.name);
-				var result_cell = div_source.getElementsByClassName('result')
-
-				addBulletDamages(result_cell[0], damage, i, damage.probable_duplicate)
-				drawContextDamage(file.name, damage, i);
-
-				i++;
-			}
-		}
-
-		i = 0
 		for(const plate of jsons['plates_json']['plates']){
 			if(plate.file == file.name)
 			{
@@ -187,6 +173,20 @@ function showResult( files, jsons ){
 
 				addBulletPlates(result_cell[0], plate, i)
 				drawContextPlate(file.name, plate, i);
+
+				i++;
+			}
+		}
+
+		i = 0
+		for(const damage of jsons['damages_json']['damages']){
+			if(damage.file == file.name)
+			{
+ 				var div_source = document.getElementById("block_"+file.name);
+				var result_cell = div_source.getElementsByClassName('result')
+
+				addBulletDamages(result_cell[0], damage, i, damage.probable_duplicate)
+				drawContextDamage(file.name, damage, i);
 
 				i++;
 			}
