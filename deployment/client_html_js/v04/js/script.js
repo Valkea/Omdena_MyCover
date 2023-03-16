@@ -311,4 +311,5 @@ function drawContextPlate(name, plate, i){
 	ctx.rect(x, y, w, h)
 	ctx.strokeStyle = "#FF0000";
 	ctx.stroke();
+	ctx.lineWidth = 1;
 }
