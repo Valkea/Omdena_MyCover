@@ -2,7 +2,7 @@
 // --- GLOBAL VARIABLES ---
 
 const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
-// const api_url = "http://127.0.0.1:5000/";
+//const api_url = "http://127.0.0.1:5000/";
 
 var winW = window.innerWidth;
 var winH = window.innerHeight;
@@ -73,6 +73,7 @@ function display_originals( files ){
 
 }
 
+let contexts = {}
 function initializeCells(files){
 
 	var source = document.getElementById('blueprint')
@@ -81,34 +82,19 @@ function initializeCells(files){
 	newW = Math.min(winW/2,600)
 	newW = 200
 
+	contexts = {}
+
 	for(const i in files){
 
 		var name = files[i].name
 		let new_element = source.cloneNode(true)
 		new_element.id = "block_"+name
 
-		// var result_cell = new_element.getElementsByClassName('result')
-		// result_cell[0].innerHTML = "LOADING"
-
 		var canvas = new_element.getElementsByTagName("canvas")
-		canvas[0].width = newW;
-        	canvas[0].height = newW;
-
- 		var image = document.getElementById('original_'+name);
-        	// var image = URL.createObjectURL(files[i]);
-        	// var image = files[i];
-		// var image = document.createElement("img")
-		// image.id = "original"+i
-		// image.classList.add('original');
-        	// image.src=URL.createObjectURL(files[i]);
-
     		var ctx = canvas[0].getContext('2d');
-        	ctx.drawImage(image, 0, 0, newW, newW);
-    		
-		ctx.fillStyle = "#FF0000";
-		ctx.fillRect(2, 2, 10, 10)
 
-		console.log("loop", i, image, ctx, newW)
+		contexts[name] = ctx;
+
 		div_results.appendChild(new_element)
 	}
 }
@@ -162,6 +148,20 @@ function saveJson(json, files, action){
 
 
 function showResult( files, jsons ){
+	
+	for(const file of files){
+ 		var div_source = document.getElementById("block_"+file.name);
+
+		var loader_div = div_source.getElementsByClassName("loader");
+		loader_div[0].style.display = 'none';
+
+		var canvas_div = div_source.getElementsByClassName("canvas");
+		canvas_div[0].style.display = 'block';
+
+		var canvas = div_source.getElementsByTagName("canvas")
+		newW = Math.min(winW/2,600)
+		drawContextBackground(canvas[0], file.name, newW, newW);
+	}
 
 	for(const file of files){
 		let i = 0
@@ -170,17 +170,9 @@ function showResult( files, jsons ){
 			{
  				var div_source = document.getElementById("block_"+file.name);
 				var result_cell = div_source.getElementsByClassName('result')
+
 				addBulletDamages(result_cell[0], damage, i, damage.probable_duplicate)
-
-				var loader_div = div_source.getElementsByClassName("loader");
-				loader_div[0].style.display = 'none';
-
-				var canvas_div = div_source.getElementsByClassName("canvas");
-				canvas_div[0].style.display = 'block';
-
-				var canvas = div_source.getElementsByTagName("canvas")
-				newW = Math.min(winW/2,600)
- 				drawCanvas(canvas[0], file.name, newW, newW, jsons);
+				drawContextDamage(file.name, damage, i);
 
 				i++;
 			}
@@ -192,8 +184,11 @@ function showResult( files, jsons ){
 			{
  				var div_source = document.getElementById("block_"+file.name);
 				var result_cell = div_source.getElementsByClassName('result')
-				addBulletPlates(result_cell[0], plate, i)
 
+				addBulletPlates(result_cell[0], plate, i)
+				drawContextPlate(file.name, plate, i);
+
+				i++;
 			}
 		}
 	}
@@ -230,107 +225,90 @@ function addBulletPlates(result_cell, plate, index){
 	result_cell.innerHTML += result
 }
 
-function drawCanvas(canvas, name, newWidth, newHeight, jsons) {
+// --- DRAW DAMAGES & PLATES
 
-	console.log("DRAW ", name)
+colors = [
+	'#FF0000', // RED
+	'#0000FF', // BLUE
+	'#FF00FF', // MAGANTA
+	'#FFC000', // ORANGE
+	'#00CC00', // GREEN
+	'#FFFC00', // YELLOW
+	'#00FFFF', // CYAN
+]
 
 
- 	var image = document.getElementById('original_'+name);
+function drawContextBackground(canvas, name, newWidth, newHeight)
+{
+ 	let image = document.getElementById('original_'+name);
+	let ctx = contexts[name];
 
 	canvas.width = newWidth;
         canvas.height = newHeight;
 
-	ratioW = newWidth/image.width;
-	ratioH = newHeight/image.height;
+	ctx.ratioW = newWidth/image.width;
+	ctx.ratioH = newHeight/image.height;
+	ctx.j = 0;
 
-    	ctx = canvas.getContext('2d');
-
-        // --- DRAW THE IMAGE
         ctx.drawImage(image, 0, 0, newWidth, newHeight);
+}
 
+function drawContextDamage(name, damage, i){
 
-	// --- DRAW DAMAGES 
- 	colors = [
- 		'#FF0000', // RED
- 		'#0000FF', // BLUE
- 		'#FF00FF', // MAGANTA
- 		'#FFC000', // ORANGE
- 		'#00CC00', // GREEN
- 		'#FFFC00', // YELLOW
- 		'#00FFFF', // CYAN
- 	]
- 
- 
- 	let i = 0
-	let j = 0
- 	for(let damage of jsons['damages_json'].damages){
+	let ctx = contexts[name];
 
-		if(damage.file == name){
+ 	x = (damage.coords[0])*ctx.ratioW;
+ 	y = (damage.coords[1])*ctx.ratioH;
+ 	w = (damage.coords[2]-damage.coords[0])*ctx.ratioW;
+ 	h = (damage.coords[3]-damage.coords[1])*ctx.ratioH;
  
- 			x = (damage.coords[0])*ratioW;
- 			y = (damage.coords[1])*ratioH;
- 			w = (damage.coords[2]-damage.coords[0])*ratioW;
- 			h = (damage.coords[3]-damage.coords[1])*ratioH;
- 
-
-			if(damage.probable_duplicate == true){
-				ctx.setLineDash([3, 3]);
-				ctx.globalAlpha = 0.75;
-				color = "black";
-			} else {
-				ctx.setLineDash([]);
-				ctx.globalAlpha = 1.0;
- 				color = colors[j % colors.length]
-				j++;
-			}
- 
- 			ctx.beginPath();
- 			ctx.rect(x, y, w, h)
- 			ctx.strokeStyle = color;
- 			ctx.stroke();
- 
- 			ctx.globalAlpha = 0.1;
- 			ctx.fillStyle = "white";
- 			ctx.fillRect(x, y, w, h);
- 			ctx.globalAlpha = 1.0;
- 
- 			ctx.font = "10px Arial";
- 			ctx.textAlign = "left";
- 			txt = i+" "+damage.type;
- 			let width = ctx.measureText(txt).width;
- 
- 			ctx.fillStyle = "white";
- 			ctx.fillRect(x, y, width+10, 15);
- 
- 			ctx.fillStyle = color;
- 			ctx.fillText(txt, x+5, y+10);
- 			i++;
-		}
+ 	if(damage.probable_duplicate == true){
+ 		ctx.setLineDash([3, 3]);
+ 		ctx.globalAlpha = 0.75;
+ 		color = "black";
+ 	} else {
+ 		ctx.setLineDash([]);
+ 		ctx.globalAlpha = 1.0;
+ 		color = colors[ctx.j % colors.length];
+ 		ctx.j++;
  	}
+ 
+ 	ctx.beginPath();
+ 	ctx.rect(x, y, w, h)
+ 	ctx.strokeStyle = color;
+ 	ctx.stroke();
+ 
+ 	ctx.globalAlpha = 0.1;
+ 	ctx.fillStyle = "white";
+ 	ctx.fillRect(x, y, w, h);
+ 	ctx.globalAlpha = 1.0;
+ 
+ 	ctx.font = "10px Arial";
+ 	ctx.textAlign = "left";
+ 	txt = i+" "+damage.type;
+ 	let width = ctx.measureText(txt).width;
+ 
+ 	ctx.fillStyle = "white";
+ 	ctx.fillRect(x, y, width+10, 15);
+ 
+ 	ctx.fillStyle = color;
+ 	ctx.fillText(txt, x+5, y+10);
+}
 
-	// --- DRAW PLATES 
-	i = 0
+function drawContextPlate(name, plate, i){
+
+	let ctx = contexts[name];
+	
+ 	x = (plate.coords[0])*ctx.ratioW;
+ 	y = (plate.coords[1])*ctx.ratioH;
+ 	w = (plate.coords[2]-plate.coords[0])*ctx.ratioW;
+ 	h = (plate.coords[3]-plate.coords[1])*ctx.ratioH;
 
 	ctx.lineWidth = 3;
 	ctx.setLineDash([10, 5]);
 
-	for(let plate of jsons['plates_json'].plates){
-
-		if(plate.file == name){
-
- 			x = (plate.coords[0])*ratioW;
- 			y = (plate.coords[1])*ratioH;
- 			w = (plate.coords[2]-plate.coords[0])*ratioW;
- 			h = (plate.coords[3]-plate.coords[1])*ratioH;
-
-			color = "#FF0000"
-
-			ctx.beginPath();
-			ctx.rect(x, y, w, h)
-			ctx.strokeStyle = color;
-			ctx.stroke();
-
-			i++;
-		}
-	}
+	ctx.beginPath();
+	ctx.rect(x, y, w, h)
+	ctx.strokeStyle = "#FF0000";
+	ctx.stroke();
 }
