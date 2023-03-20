@@ -60,7 +60,9 @@ def get_text(image: np.array, coords: np.array) -> str:
 # --- MAIN FUNCTION
 
 
-def predict_plates(filtered_files: list, preprocessed_files: list, original_ratios: list) -> list:
+def predict_plates(
+    filtered_files: list, preprocessed_files: list, original_ratios: list
+) -> list:
 
     results = model_lpd.predict(preprocessed_files, agnostic_nms=True)
     predictions = []

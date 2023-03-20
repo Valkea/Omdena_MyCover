@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 from json2html import json2html
 
+from api_internals.config_postgres import init_db, db, demo_queries
 from api_internals.config_apiflask import Image, DamagesFullOut, PlatesFullOut
 from api_internals.predict_damages import predict_damages, cdd_model_name
 from api_internals.predict_plates import predict_plates, lpd_model_name
@@ -23,6 +24,8 @@ app.secret_key = "super secret key"
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * 20
 
 CORS(app)
+init_db(app)
+demo_queries()
 
 ALLOWED_EXTENSIONS = {
     "bmp",
@@ -48,6 +51,8 @@ ALLOWED_EXTENSIONS = {
     # "wmv",
     # "webm",  # videos
 }
+
+# --- DEFINE FUNCTIONS
 
 
 def allowed_file(filename):
@@ -78,7 +83,9 @@ def preprocess_image(f):
     image_bytes = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     newSize = 640
-    resized = cv2.resize(image_bytes, (newSize, newSize), interpolation=cv2.INTER_LINEAR)
+    resized = cv2.resize(
+        image_bytes, (newSize, newSize), interpolation=cv2.INTER_LINEAR
+    )
 
     ratioW = image_bytes.shape[0] / newSize
     ratioH = image_bytes.shape[1] / newSize
@@ -117,6 +124,7 @@ def check_uploaded_files(request: request) -> list:
 
 # ----- PREDICT DAMAGES -----
 
+
 @app.route("/predict_damages", methods=["POST"])
 @app.input(Image, location="files")
 @app.output(DamagesFullOut)
@@ -148,6 +156,7 @@ def route_predict_damages(data):
 
 
 # ----- PREDICT PLATES -----
+
 
 @app.route("/predict_plates", methods=["POST"])
 @app.input(Image, location="files")

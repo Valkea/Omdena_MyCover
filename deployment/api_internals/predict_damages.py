@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from api_internals.config_postgres import get_db_price
+
 import cv2
 import numpy as np
 
@@ -165,6 +167,9 @@ def get_price(class_name: str, action: str) -> str:
         },
     }
 
+    db_price = get_db_price("Toyota", "Prius", "2009", "front_bumper_damage")
+    print("DB PRICE:", db_price)
+
     return f"{prices[action][class_name]}$"
 
 
@@ -208,8 +213,8 @@ class RestrictDamagesPerClass:
 
             # --- ADD DUPLICATED TAGS
             if len(out_dict[k]) > 0:
-                for j in range(self.dmg_dict[k]['max'], len(out_dict[k])):
-                    out_dict[k][j][0]['probable_duplicate'] = True
+                for j in range(self.dmg_dict[k]["max"], len(out_dict[k])):
+                    out_dict[k][j][0]["probable_duplicate"] = True
 
         # --- FLATTEN THE TUPLES
         flatten = []
@@ -224,7 +229,9 @@ class RestrictDamagesPerClass:
 # --- MAIN FUNCTION
 
 
-def predict_damages(filtered_files: list, preprocessed_files: list, original_ratios: list) -> list:
+def predict_damages(
+    filtered_files: list, preprocessed_files: list, original_ratios: list
+) -> list:
 
     results = model_cdd.predict(preprocessed_files, agnostic_nms=True)
     predictions = RestrictDamagesPerClass()
