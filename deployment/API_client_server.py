@@ -25,7 +25,7 @@ app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * 20
 
 CORS(app)
 init_db(app)
-demo_queries()
+# demo_queries()
 
 ALLOWED_EXTENSIONS = {
     "bmp",
@@ -140,8 +140,17 @@ def route_predict_damages(data):
     # --- PREPARE FILES
     preprocessed_files, original_ratios = prepare_images(filtered_files)
 
+    # --- GATHER CUSTOMER CAR INFORMATION
+    customer_car_info = {
+        "trade": request.form.get("trade"),
+        "model": request.form.get("model"),
+        "year": request.form.get("year"),
+    }
+
     # --- PREDICT
-    json_damages = predict_damages(filtered_files, preprocessed_files, original_ratios)
+    json_damages = predict_damages(
+        filtered_files, preprocessed_files, original_ratios, customer_car_info
+    )
     json_dict = {"damage_model": cdd_model_name, "damages": json_damages}
 
     # --- RETURN ANSWER

@@ -82,21 +82,24 @@ def get_db_price(trade: str, model: str, year: int, part: str, action: str) -> i
 
             trade_v = trade.lower() if trade is not None else None
             model_v = model.lower() if model is not None else None
+            year_v = str(year) if year is not None else None
 
             part_price = Price.query.filter(
                 Price.part == part.replace('_damage', ''),
                 Price.trade == trade_v,
                 Price.model == model_v,
-                Price.year == year,
+                Price.year == year_v,
             ).all()
 
             # --- If the price can't be find with the provided parameters
             # --- we fall back to the avarage part prices
 
             if len(part_price) == 0:
-                print("PRICE FALLBACK")
                 part_price = Price.query.filter(
                     Price.part == part.replace('_damage', ''),
+                    Price.trade == None,
+                    Price.model == None,
+                    Price.year == None,
                 ).all()
 
             # --- return price according to the recommended action

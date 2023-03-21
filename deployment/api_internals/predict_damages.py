@@ -116,29 +116,29 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     )[0][0][0]
 
 
-def get_price(part: str, action: str, trade: str = None, model: str = None, year: int = None) -> int:
+def get_price(part: str, action: str, customer_car_info: dict) -> int:
     """
     This function is a temporary function that is supposed to be replaced with
     a function connecting to the database in order to get real prices
 
     Parameters
     ----------
-    trade: string
-        the trade name of the car (provided by the POST call)
-    model: string
-        the model name of the car (provided by the POST call)
-    year: string
-        the year of the car (provided by the POST call)
     part: string
         the name of the detected damage
     action: string
         the name of the recommanded action (REPAIR / REPLACE)
+    customer_car_info: dict
+        a dictionnary containng the 'trade', 'model', 'year' send along with the POST request
 
     Returns
     -------
     int:
         The estimated price
     """
+
+    trade = customer_car_info['trade']
+    model = customer_car_info['model']
+    year = customer_car_info['year']
 
     db_price = get_db_price(trade, model, year, part, action)
     return db_price
@@ -201,7 +201,7 @@ class RestrictDamagesPerClass:
 
 
 def predict_damages(
-    filtered_files: list, preprocessed_files: list, original_ratios: list
+        filtered_files: list, preprocessed_files: list, original_ratios: list, customer_car_info: dict
 ) -> list:
 
     results = model_cdd.predict(preprocessed_files, agnostic_nms=True)
@@ -239,7 +239,7 @@ def predict_damages(
                 "type": class_name,
                 "coords": coords_ratio,
                 "severity": str(severity),
-                "price": get_price(class_name, action),
+                "price": get_price(class_name, action, customer_car_info),
                 "action": action,
                 "file": filtered_files[i].filename,
                 "probable_duplicate": False,
