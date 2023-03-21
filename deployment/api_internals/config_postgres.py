@@ -83,9 +83,10 @@ def get_db_price(trade: str, model: str, year: int, part: str, action: str) -> i
             trade_v = trade.lower() if trade is not None else None
             model_v = model.lower() if model is not None else None
             year_v = str(year) if year is not None else None
+            part_v = part.replace('_damage', '')
 
             part_price = Price.query.filter(
-                Price.part == part.replace('_damage', ''),
+                Price.part == part_v,
                 Price.trade == trade_v,
                 Price.model == model_v,
                 Price.year == year_v,
@@ -96,7 +97,7 @@ def get_db_price(trade: str, model: str, year: int, part: str, action: str) -> i
 
             if len(part_price) == 0:
                 part_price = Price.query.filter(
-                    Price.part == part.replace('_damage', ''),
+                    Price.part == part_v,
                     Price.trade == None,
                     Price.model == None,
                     Price.year == None,
