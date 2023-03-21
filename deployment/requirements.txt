@@ -12,3 +12,6 @@ onnxruntime-gpu==1.12.1
 json2html
 apiflask
 flask-cors
+
+Flask-SQLAlchemy
+psycopg2-binary
