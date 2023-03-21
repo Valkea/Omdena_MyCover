@@ -12,7 +12,7 @@ import numpy as np
 from json2html import json2html
 
 from api_internals.config_postgres import init_db, demo_queries
-from api_internals.config_apiflask import Image, DamagesFullOut, PlatesFullOut
+from api_internals.config_apiflask import DamagesIn, PlatesIn, DamagesFullOut, PlatesFullOut
 from api_internals.predict_damages import predict_damages, cdd_model_name
 from api_internals.predict_plates import predict_plates, lpd_model_name
 
@@ -126,7 +126,7 @@ def check_uploaded_files(request: request) -> list:
 
 
 @app.route("/predict_damages", methods=["POST"])
-@app.input(Image, location="files")
+@app.input(DamagesIn, location="files")
 @app.output(DamagesFullOut)
 def route_predict_damages(data):
     """
@@ -168,7 +168,7 @@ def route_predict_damages(data):
 
 
 @app.route("/predict_plates", methods=["POST"])
-@app.input(Image, location="files")
+@app.input(PlatesIn, location="files")
 @app.output(PlatesFullOut)
 def route_predict_plates(data):
     """

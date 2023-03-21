@@ -80,9 +80,9 @@ def get_db_price(trade: str, model: str, year: int, part: str, action: str) -> i
 
             # --- search exact price
 
-            trade_v = trade.lower() if trade is not None else None
-            model_v = model.lower() if model is not None else None
-            year_v = str(year) if year is not None else None
+            trade_v = None if trade is None or trade == "" else trade.lower()
+            model_v = None if model is None or model == "" else model.lower()
+            year_v = None if year is None or year == "" else str(year)
             part_v = part.replace('_damage', '')
 
             part_price = Price.query.filter(

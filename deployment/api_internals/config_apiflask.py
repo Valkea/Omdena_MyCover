@@ -6,8 +6,15 @@ from apiflask.validators import Length
 # --- Define input and outputs for APIFlask documentation ---
 
 
-class Image(Schema):
-    file = File()
+class DamagesIn(Schema):
+    file = File(required=True)
+    trade = String(required=False)
+    model = String(required=False)
+    year = String(required=False)
+
+
+class PlatesIn(Schema):
+    file = File(required=True)
 
 
 damage_sample = [
