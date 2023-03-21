@@ -116,61 +116,32 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     )[0][0][0]
 
 
-def get_price(class_name: str, action: str) -> str:
+def get_price(part: str, action: str, trade: str = None, model: str = None, year: int = None) -> int:
     """
     This function is a temporary function that is supposed to be replaced with
     a function connecting to the database in order to get real prices
 
     Parameters
     ----------
-    class_name: string
+    trade: string
+        the trade name of the car (provided by the POST call)
+    model: string
+        the model name of the car (provided by the POST call)
+    year: string
+        the year of the car (provided by the POST call)
+    part: string
         the name of the detected damage
     action: string
         the name of the recommanded action (REPAIR / REPLACE)
 
     Returns
     -------
-    str:
+    int:
         The estimated price
     """
 
-    prices = {
-        "REPAIR": {
-            "front_bumper_damage": 435,
-            "hood_damage": 492,
-            "front_fender_damage": 330,
-            "sidedoor_panel_damage": 368,
-            "roof_damage": 418,
-            "backdoor_panel_damage": 370,
-            "rear_bumper_damage": 399,
-            "rear_fender_damage": 323,
-            "runnigboard_damage": 342,
-            "pillar_damage": 322,
-        },
-        "REPLACE": {
-            "front_bumper_damage": 547,
-            "hood_damage": 711,
-            "front_fender_damage": 517,
-            "sidedoor_panel_damage": 688,
-            "roof_damage": 799,
-            "backdoor_panel_damage": 754,
-            "rear_bumper_damage": 631,
-            "rear_fender_damage": 588,
-            "runnigboard_damage": 499,
-            "pillar_damage": 476,
-            "headlight_damage": 195,
-            "front_windscreen_damage": 660,
-            "sidemirror_damage": 175,
-            "sidedoor_window_damage": 337,
-            "rear_windscreen_damage": 575,
-            "taillight_damage": 138,
-        },
-    }
-
-    db_price = get_db_price("Toyota", "Prius", "2009", "front_bumper_damage")
-    print("DB PRICE:", db_price)
-
-    return f"{prices[action][class_name]}$"
+    db_price = get_db_price(trade, model, year, part, action)
+    return db_price
 
 
 class RestrictDamagesPerClass:

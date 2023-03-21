@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from json2html import json2html
 
-from api_internals.config_postgres import init_db, db, demo_queries
+from api_internals.config_postgres import init_db, demo_queries
 from api_internals.config_apiflask import Image, DamagesFullOut, PlatesFullOut
 from api_internals.predict_damages import predict_damages, cdd_model_name
 from api_internals.predict_plates import predict_plates, lpd_model_name
