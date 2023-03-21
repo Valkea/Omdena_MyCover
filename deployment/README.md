@@ -5,6 +5,9 @@ You will find in the section below, all the instructions required to run the API
 1 - in the first section, I will describe how to run it from the source (so you can modify the API)<br>
 2 - in the second section, I will explain how to use the API from the docker I prepared and deployed on the Docker Hub.
 
+Note that all versions (local or docker) might not work properly if the AWS RDS instance (PostgreSQL) is down (and I will shut it down at some point).
+
+
 ## 1. Run the API locally from sources
 (You will need Omdena's credential for this part, but if you don't have these credentials, you can try out the Docker version at the bottom)
 
