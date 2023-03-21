@@ -19,6 +19,14 @@ COPY ["API_client_server.py", "./"]
 COPY ["api_internals/*.py", "./api_internals/"]
 COPY ["models/*", "./models/"]
 
+# --- Define environment variables
+
+ENV DATABASE_ADDRESS='database-2.cyxgquwkekz3.eu-west-1.rds.amazonaws.com'
+ENV DATABASE_PORT=5432
+ENV DATABASE_NAME='postgres'
+ENV DATABASE_USR='postgres'
+ENV DATABASE_PWD='postgres'
+
 # --- Start server
 # ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:$PORT", "API_client_server:app"]
 CMD gunicorn API_client_server:app --bind 0.0.0.0:$PORT --timeout=60 --threads=2
