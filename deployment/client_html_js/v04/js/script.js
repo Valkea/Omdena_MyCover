@@ -2,7 +2,7 @@
 // --- GLOBAL VARIABLES ---
 
 const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
-//const api_url = "http://127.0.0.1:5000/";
+// const api_url = "http://127.0.0.1:5000/";
 
 var winW = window.innerWidth;
 var winH = window.innerHeight;
@@ -14,18 +14,21 @@ window.onload = function() {
 	var fileInput = document.getElementById('filesupload');
 	var fileList = [];
 	
-	fileInput.addEventListener('change', function (evnt) {
+	fileInput.addEventListener('change', function (event) {
 		fileList = [];
 		for (var i = 0; i < fileInput.files.length; i++) {
 			fileList.push(fileInput.files[i]);
 		}
 		console.log(fileList);
 		display_originals(fileList);
-		initializeCells(fileList);
-		predict_all(fileList)
 	});
 
 
+	var submitBtn = document.getElementById('predict');
+	submitBtn.addEventListener('click', function (event) {
+		initializeCells(fileList);
+		predict_all(fileList)
+	});
 }
 
 // --- FUNCTIONS
@@ -111,6 +114,27 @@ function postPictures(files, action, callback) {
 	for (const file of files) {
     		formData.append('file', file, file.name);
   	}
+
+	if(action == "predict_damages"){
+
+		trade_v = document.getElementById('trade').value;
+		console.log("TRADE:", trade_v);
+		if (trade_v != ''){
+			formData.append('trade', trade_v);
+		}
+
+		model_v = document.getElementById('model').value;
+		console.log("MODEL:", model_v);
+		if (model_v != ''){
+			formData.append('model', model_v);
+		}
+
+		year_v = document.getElementById('year').value;
+		console.log("YEAR:", year_v);
+		if (year_v != ''){
+			formData.append('year', year_v);
+		}
+	}
 
 	var myInit = {
 		method: 'POST',
