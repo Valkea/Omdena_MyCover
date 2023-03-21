@@ -17,17 +17,6 @@ db_app = None
 
 # --- DEFINE TABLE SCHEMA
 
-
-class Item(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(80), unique=True, nullable=False)
-    content = db.Column(db.String(120), unique=True, nullable=False)
-
-    def __init__(self, title, content):
-        self.title = title
-        self.content = content
-
-
 class Price(db.Model):
 
     __tablename__ = "price"
@@ -123,25 +112,25 @@ def demo_queries():
 
             print("===========================================")
 
-            allEntries = db.session.query(Item).all()
+            allEntries = db.session.query(Price).all()
             for entry in allEntries:
-                print("==>", entry.id, entry.title, entry.content)
+                print("==>", entry.id, entry.part, entry.trade, entry.model, entry.year, entry.price_repair, entry.price_replace)
 
             # oneEntry = db.session.query(Item).get(
             # oneEntry = db.session.query(Item).filter(db.Item.id==2)
-            oneEntry = Item.query.get(2)
-            print("=====>", oneEntry.id, oneEntry.title, oneEntry.content)
+            oneEntry = Price.query.get(2)
+            print("=====>", oneEntry.id, oneEntry.part, oneEntry.trade, oneEntry.model, oneEntry.year, oneEntry.price_repair, oneEntry.price_replace)
 
-            oneEntry = Item.query.filter(Item.title == "title3").all()[0]
-            print("=====>", oneEntry.id, oneEntry.title, oneEntry.content)
+            oneEntry = Price.query.filter(Price.part == "hood").all()[0]
+            print("=====>", oneEntry.id, oneEntry.part, oneEntry.trade, oneEntry.model, oneEntry.year, oneEntry.price_repair, oneEntry.price_replace)
 
-            oneEntry = Item.query.filter(
-                Item.title == "title1", Item.content == "content1"
+            oneEntry = Price.query.filter(
+                Price.part == "front_bumper", Price.trade == "toyota"
             ).all()[0]
-            print("=====>", oneEntry.id, oneEntry.title, oneEntry.content)
+            print("=====>", oneEntry.id, oneEntry.part, oneEntry.trade, oneEntry.model, oneEntry.year, oneEntry.price_repair, oneEntry.price_replace)
 
-            oneEntry = Item.query.filter(
-                Item.title == "title0", Item.content == "content1"
+            oneEntry = Price.query.filter(
+                Price.part == "nopart", Price.trade == "toyota"
             ).all()
             print("=====>", oneEntry, type(db))
 
