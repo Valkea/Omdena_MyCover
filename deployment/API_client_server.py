@@ -56,15 +56,59 @@ ALLOWED_EXTENSIONS = {
 
 
 def allowed_file(filename):
+    """
+    Check if a file is allowed based on its extension.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file to check.
+
+    Returns
+    -------
+    bool
+        True if the file extension is allowed, False otherwise.
+    """
+
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def filter_images(f):
+    """
+    Check weither or not the provided file is compatible with the models.
+
+    Parameters
+    ----------
+    f : file object
+        A file object of an image to be filtered.
+
+    Returns
+    -------
+    bool
+        True if the file extension is allowed, False otherwise.
+    """
+
     # filename = secure_filename(file.filename)
     return allowed_file(f.filename)
 
 
 def prepare_images(filtered_files):
+    """
+    Preprocess a batch of images.
+
+    Parameters
+    ----------
+    filtered_files : list of str
+        A list of file paths of images to be preprocessed.
+
+    Returns
+    -------
+    tuple of (list, list)
+        A tuple containing two lists:
+        - preprocessed_files (list): A list of preprocessed image files.
+        - original_ratios (list): A list of image ratios to recover the original positions/sizes.
+    """
+
     preprocessed_data = [preprocess_image(x) for x in filtered_files]
     preprocessed_data = list(map(list, zip(*preprocessed_data)))
 
@@ -73,6 +117,21 @@ def prepare_images(filtered_files):
 
 
 def preprocess_image(f):
+    """
+    Preprocess an image file.
+
+    Parameters
+    ----------
+    f : file object
+        A file object of an image to be preprocessed.
+
+    Returns
+    -------
+    tuple of (ndarray, tuple)
+        A tuple containing two elements:
+        - resized (ndarray): A preprocessed image.
+        - ratioW, ratioH (tuple): A tuple of ratios for the original image.
+    """
 
     # Open POST file with PIL
     # image_bytes = Image.open(io.BytesIO(file.read()))
@@ -94,6 +153,26 @@ def preprocess_image(f):
 
 
 def check_uploaded_files(request: request) -> list:
+    """
+    Check if files were uploaded properly and if they have compatible formats.
+
+    Parameters
+    ----------
+    request : request
+        The Flask request object containing the files to check.
+
+    Returns
+    -------
+    list
+        A list of file objects that have a compatible format.
+
+    Raises
+    ------
+    BadRequest
+        If the 'file' form-data field is missing or contains no data.
+    BadRequest
+        If none of the uploaded files have a compatible format.
+    """
 
     # --- CHECK IF THE POST REQUEST HAS THE FILE PART
 
@@ -131,7 +210,18 @@ def check_uploaded_files(request: request) -> list:
 def route_predict_damages(data):
     """
     Define the API endpoint to get damages predictions from one or more images.
-    This entrypoint awaits a POST request along with a 'file' parameter containing image(s).
+    This entrypoint awaits a POST request along with a 'file' parameter
+    containing image(s) and returns a JSON object.
+
+    Parameters
+    ----------
+    request : request
+        The Flask request object containing the files and optional car parameters.
+
+    Returns
+    -------
+    jsonify(json_dict) : JSON object
+        A JSON object containing the predicted damages along with several other information.
     """
 
     # --- CHECK FILES
@@ -173,7 +263,18 @@ def route_predict_damages(data):
 def route_predict_plates(data):
     """
     Define the API endpoint to get plate text (if any) from an image.
-    This entrypoint awaits a POST request along with a 'file' parameter containing an image.
+    This entrypoint awaits a POST request along with a 'file' parameter
+    containing image(s) and returns a JSON object.
+
+    Parameters
+    ----------
+    request : request
+        The Flask request object containing the files.
+
+    Returns
+    -------
+    jsonify(json_dict) : JSON object
+        A JSON object containing the predicted plates along with several other information.
     """
 
     # --- CHECK FILES
