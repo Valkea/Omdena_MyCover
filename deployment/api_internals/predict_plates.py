@@ -63,6 +63,28 @@ def get_text(image: np.array, coords: np.array) -> str:
 def predict_plates(
     filtered_files: list, preprocessed_files: list, original_ratios: list
 ) -> list:
+    """
+    Predicts license plate numbers for given preprocessed files.
+
+    Parameters
+    ----------
+    filtered_files: list
+        A list of the filtered files so that we can return the name of the original files.
+    preprocessed_files: list
+        A list of preprocessed files so that we can predict damages and severity.
+    original_ratios: list
+        A list of original ratios of the filtered files so that we can return damages
+        coordinates that match the original file shape.
+
+    Returns
+    -------
+    list
+        A list of predicted license plates, where each item is a dictionary containing:
+            - text: (str) The predicted license plate number
+            or NOT READABLE if the text doesn't fit the Nigerian plate format.
+            - coords: (list) The coordinates of the license plate in (top, left, bottom, right) format.
+            - file: (str) The name of the file the license plate was predicted from.
+    """
 
     results = model_lpd.predict(preprocessed_files, agnostic_nms=True)
     predictions = []

@@ -69,7 +69,8 @@ def get_action(severity: float, class_name: str) -> str:
     Returns
     -------
     str:
-        The suggested action
+        The recommended action based on the severity level and class name.
+        Possible values are "REPLACE" or "REPAIR".
     """
 
     threshold = DEFAULT_THRESHOLDS[class_name]
@@ -89,14 +90,16 @@ def get_severity(image: np.array, coords: np.array, class_name: str) -> float:
     image: np.array
         the array of the original image
     coords: np.array / torch.Tensor
-        the coordinates of the damage detected on the original image by the car_damage_detect model
+        the coordinates of the damage detected on the original image by the car_damage_detect model,
+        the coordinates should be in the format (x1, y1, x2, y2).
     class_name: str
         the name of the class detected by the car_damage_detect model
 
     Returns
     -------
     float:
-        The estimated severity
+        A number indicating the severity level of the issue.
+        The value should be between 0 and 1.
     """
 
     input_size = (224, 224)
@@ -145,6 +148,24 @@ def get_price(part: str, action: str, customer_car_info: dict) -> int:
 
 
 class RestrictDamagesPerClass:
+    """
+    A class that restricts the number of damages per class, selecting 
+    the highest scored damages to be added to the final result.
+
+    Attributes
+    ----------
+    dmg_dict : dict
+        A dictionary containing the name of each damage class and the maximum number of damages
+        that can be selected from that class.
+
+    Methods
+    -------
+    add_damage(dmg_class, data, score)
+        Adds the data and score of a new damage to the list of the corresponding damage class.
+    get_selected()
+        Returns a list with the data of the top scored damages for each class,
+        up to the maximum number of damages allowed for each class.
+    """
 
     dmg_dict = {
         "hood_damage": {"max": 1},
@@ -170,9 +191,33 @@ class RestrictDamagesPerClass:
             self.dmg_dict[dmg_class]["data"] = []
 
     def add_damage(self, dmg_class, data, score):
+        """
+        Adds a new damage data to the specified damage class list.
+
+        Parameters
+        ----------
+        dmg_class : str
+            The damage class to add the data to.
+        data : dict
+            The predicted damage data.
+        score : float
+            The score associated with the damage data. This score is used
+            to return the top entry according to the dmg_dict limitation.
+        """
+
         self.dmg_dict[dmg_class]["data"].append((data, score))
 
     def get_selected(self):
+        """
+        Returns selected damage data.
+
+        Returns
+        -------
+        list:
+            A list of the TOP damages (with their data) for each car parts,
+            according to the dmg_dict limitations.
+        """
+
         out_dict = self.dmg_dict.copy()
 
         # --- SORT & TRIM
@@ -203,6 +248,36 @@ class RestrictDamagesPerClass:
 def predict_damages(
         filtered_files: list, preprocessed_files: list, original_ratios: list, customer_car_info: dict
 ) -> list:
+    """
+    Predicts damages and their severity levels for given preprocessed files.
+
+    Parameters
+    ----------
+    filtered_files: list
+        A list of the filtered files so that we can return the name of the original files.
+    preprocessed_files: list
+        A list of preprocessed files so that we can predict damages and severity.
+    original_ratios: list
+        A list of original ratios of the filtered files so that we can return damages
+        coordinates that match the original file shape.
+    customer_car_info: dict
+        A dictionary containing information about the customer's car (trade, model, year)
+        so that we can fetch a more precise estimated price.
+
+    Returns
+    -------
+    list
+        A list of predicted damages, where each item is a dictionary containing the following information:
+            - severity_model: (str) The name of the severity model used for prediction.
+            - type: (str) The type of damage.
+            - coords: (list) The coordinates of the damage in (top, left, bottom, right) format.
+            - severity: (str) The severity level of the damage.
+            - price: (float) The estimated price to repair the damage.
+            - action: (str) The recommended action to take for the damage.
+            - file: (str) The name of the file the damage was predicted from.
+            - probable_duplicate: (bool) True if the predicted damage for a given class
+            already reached the limit in the BATCH of images (they are ordered by severity score)
+    """
 
     results = model_cdd.predict(preprocessed_files, agnostic_nms=True)
     predictions = RestrictDamagesPerClass()
