@@ -68,3 +68,7 @@ To solve this problem, you simply need to get the screen-instance back with the 
 Then you can check the logs and / or stop the instance
 > (remove) `CTRL+C` to stop the instance
 
+
+## 4. (Optional) Use an RDS instance fro PostgreSQL
+
+Refere to the AWS_RDS.md file for instructions on how to setup an RDS instance and connect it to the EC2 instance.
