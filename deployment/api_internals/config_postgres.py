@@ -61,6 +61,27 @@ def init_db(app):
 
 
 def get_db_price(trade: str, model: str, year: int, part: str, action: str) -> int:
+    """
+    Returns the price of a car part from a database, given the part details and recommended action.
+
+    Parameters
+    ----------
+    trade: str
+        The name of the trade of the car manufacturer.
+    model: str
+        The model of the car.
+    year: int
+        The year the car was manufactured.
+    part: str
+        The name of the car part to get the price for.
+    action: str
+        The recommended action for the part - either 'REPAIR' or 'REPLACE'.
+
+    Returns
+    -------
+    int
+        The price of the car part as an integer, or None if the part price could not be found in the database.
+    """
 
     try:
         price = None
