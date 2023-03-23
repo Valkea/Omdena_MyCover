@@ -21,30 +21,31 @@ Sources:
 > 1. Under `Network and Security / Security Groups`. Then Click `Create Security Group` to create one
 > 2. Give it a name, then add Inboud & Outbount rules (type: All traffic | Source/Destination: 0.0.0.0:0)
 > 3. Save
-> 4. Under `Network and Security` tab, select `Network Interfaces`, then right click on the instance and select `Change security groups`
-> 5. Select the group we just created (basicgroup) and hit Save. 
-> 6. If needed, start the instance (but it should already be running)
+> 4. Under `Network and Security` tab, select `Network Interfaces`
+> 5. Click on the instance and select `Change security groups`
+> 6. Select the group we just created (basicgroup) and hit Save. 
+> 7. If needed, start the instance (but it should already be running)
 
 
 ## 2. Connect to AWS EC2 instance using ssh
 
 > 1. Under `EC2 / Instances` select your EC2 instance and click `Actions / connect`
 > 2. Select `SSH client` tab
-> 3. >>> cd to the project folder with the .pem file
-> 4. >>> chmod 400 my_key_pair.pem 
+> 3. `cd to the project folder with the .pem file`
+> 4. `chmod 400 my_key_pair.pem`
 
 ### Copy files to EC2 instance
-> `scp -r -i my_key_pair.pem ./API_client_server.py ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:~/`
-> `scp -r -i my_key_pair.pem ./requirements.txt ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:~/`
-> `scp -r -i my_key_pair.pem ./model1.pt ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:~/`
-> etc.
+> 1. `scp -r -i my_key_pair.pem ./API_client_server.py ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:~/`
+> 2. `scp -r -i my_key_pair.pem ./requirements.txt ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:~/`
+> 3. `scp -r -i my_key_pair.pem ./model1.pt ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:~/`
+> 4. etc.
 
 ### Connect the EC2 instance and run the project
-> 1. `ssh -i my_key_pair.pem ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com`
+> 1. ```ssh -i my_key_pair.pem ubuntu@ec2-3-249-124-105.eu-west-1.compute.amazonaws.com```
 > 2. (remote) `ls` (we should see the uploaded files)
 > 3. (remote) `pip install -r requirements.txt`
 > 4. (remote) `python API_client_server.py`
-> 5. Access the model using the public url (EC2/Instances) + the app port (i.e. : http://ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:5000 )
+> 5. Access the model using the public url (EC2/Instances) + the app port <br>(i.e. : http://ec2-3-249-124-105.eu-west-1.compute.amazonaws.com:5000 )
 
 
 ## 3. Make it persistant
@@ -66,3 +67,4 @@ To solve this problem, you simply need to get the screen-instance back with the 
 
 Then you can check the logs and / or stop the instance
 > (remove) `CTRL+C` to stop the instance
+
