@@ -33,7 +33,8 @@ damage_sample = [
 plate_sample = [
     {
         "coords": [294.0, 215.0, 440.0, 262.0],
-        "text": "NOT READABLE",
+        "text": "NDC 6300",
+        "invalid": ["LAGOS (50.00%)", "Center of excellence (12.00%)"],
         "file": "my_photo.jpg",
     }
 ]
@@ -58,6 +59,7 @@ class DamagesFullOut(Schema):
 class PlatesOut(Schema):
     coords = List(Integer(), many=True, validate=Length(4, 4))
     text = String()
+    invalid = List(String())
     file = String()
 
 

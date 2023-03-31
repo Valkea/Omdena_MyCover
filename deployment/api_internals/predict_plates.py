@@ -17,7 +17,7 @@ reader = easyocr.Reader(["en"])
 # --- FUNCTIONS
 
 
-def get_text(image: np.array, coords: np.array) -> str:
+def get_text(image: np.array, coords: np.array) -> (str, list):
     """
     Try to obtain the license plate number from the license plate image.
 
@@ -32,6 +32,8 @@ def get_text(image: np.array, coords: np.array) -> str:
     -------
     str:
         The estimated plate number
+    list:
+        The list of invalid texts
     """
 
     # Extract plate coordinates
@@ -49,12 +51,15 @@ def get_text(image: np.array, coords: np.array) -> str:
     result = reader.readtext(gray)
 
     # Parse results
-    text = "NOT READABLE"
+    text = "NO NIGERIAN PLATE"
+    invalid_text = []
     for res in result:
-        if len(res[1]) in [8, 9] and res[2] > 0.1:
-            text = res[1]
+        if len(res[1]) in range(7, 10) and res[2] > 0.1:
+            text = res[1].strip()
+        else:
+            invalid_text.append(f"{res[1].strip()} ({(res[2]*100.0):.02f}%)")
 
-    return text
+    return text, invalid_text
 
 
 # --- MAIN FUNCTION
@@ -103,10 +108,11 @@ def predict_plates(
             coords_ratio[2] *= original_ratios[i][1]
             coords_ratio[3] *= original_ratios[i][0]
 
-            text = get_text(preprocessed_files[i], coords)
+            text, invalid_texts = get_text(preprocessed_files[i], coords)
 
             pred_dict = {
                 "text": text,
+                "invalid": invalid_texts,
                 "coords": coords_ratio,
                 "file": filtered_files[i].filename,
             }

@@ -1,7 +1,7 @@
 
 // --- GLOBAL VARIABLES ---
 
-const api_url = "http://ec2-54-74-190-189.eu-west-1.compute.amazonaws.com:5000/";
+const api_url = "http://ec2-34-244-123-15.eu-west-1.compute.amazonaws.com:5000/";
 // const api_url = "http://127.0.0.1:5000/";
 
 var winW = window.innerWidth;
